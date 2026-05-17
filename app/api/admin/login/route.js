@@ -69,8 +69,9 @@ export async function POST(request) {
     const isMatch = await bcrypt.compare(password, admin.password);
     if (!isMatch) {
       // Increment login attempts
+      const MAX_LOGIN_ATTEMPTS = 5;
       admin.loginAttempts = (admin.loginAttempts || 0) + 1;
-      if (admin.loginAttempts >= limit) {
+      if (admin.loginAttempts >= MAX_LOGIN_ATTEMPTS) {
         admin.lockUntil = new Date(Date.now() + 15 * 60 * 1000); // Lock for 15 minutes
       }
       await admin.save();
@@ -99,7 +100,7 @@ export async function POST(request) {
         secret: admin.twoFactorSecret,
         encoding: "base32",
         token: String(twoFactorCode).replace(/\s/g, ""),
-        window: 1, // 1 step window allowance (30 seconds)
+        window: 4, // 4 step window allowance (2 minutes) for clock drift tolerance
       });
 
       if (!verified) {

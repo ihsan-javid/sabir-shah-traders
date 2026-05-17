@@ -55,7 +55,7 @@ export async function POST(request) {
         secret,
         encoding: "base32",
         token: code.replace(/\s/g, ""),
-        window: 1, // 1 step window allowance (30 seconds)
+        window: 4, // 4 step window allowance (2 minutes)
       });
 
       if (!verified) {

@@ -142,7 +142,7 @@ export async function middleware(req) {
     let retryAfter = 60;
 
     if (method === "POST" && (pathname === "/api/auth/login" || pathname === "/api/admin/login")) {
-      const res = rateLimit(`login:${ip}`, 5, 15 * 60 * 1000);
+      const res = rateLimit(`login:${ip}`, 20, 15 * 60 * 1000);
       allowed = res.allowed;
       retryAfter = res.retryAfter || 900;
       errorMsg = "Too many login attempts. Access blocked for 15 minutes.";
