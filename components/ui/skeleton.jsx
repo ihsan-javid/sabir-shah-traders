@@ -8,14 +8,32 @@ export function Skeleton({ className }) {
 
 export function ProductSkeleton() {
   return (
-    <div className="rounded-3xl glass p-4 aspect-[4/5] flex flex-col gap-4">
-      <Skeleton className="w-full h-full rounded-2xl" />
-      <div className="space-y-2 px-1">
-        <Skeleton className="h-4 w-24" />
-        <Skeleton className="h-6 w-full" />
-        <div className="flex justify-between items-center mt-2">
-           <Skeleton className="h-6 w-20" />
-           <Skeleton className="h-8 w-8 rounded-full" />
+    <div className="rounded-3xl bg-card border border-border p-4 flex flex-col gap-4 shadow-sm h-full">
+      {/* Image Skeleton */}
+      <div className="relative aspect-square overflow-hidden rounded-2xl bg-muted/10">
+        <Skeleton className="absolute inset-0 w-full h-full" />
+      </div>
+      
+      <div className="flex flex-col flex-1 gap-4">
+        {/* Title & Description */}
+        <div className="space-y-2">
+          <Skeleton className="h-6 w-3/4 rounded-lg" />
+          <Skeleton className="h-3 w-full rounded-md" />
+          <Skeleton className="h-3 w-5/6 rounded-md" />
+        </div>
+        
+        {/* Price & Badge */}
+        <div className="mt-auto pt-4 space-y-4">
+          <div className="flex justify-between items-center">
+            <Skeleton className="h-7 w-24 rounded-lg" />
+            <Skeleton className="h-5 w-16 rounded-md" />
+          </div>
+          
+          {/* Buttons */}
+          <div className="grid grid-cols-2 gap-2">
+            <Skeleton className="h-10 rounded-full" />
+            <Skeleton className="h-10 rounded-full" />
+          </div>
         </div>
       </div>
     </div>

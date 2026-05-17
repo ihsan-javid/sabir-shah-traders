@@ -1,8 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { motion } from "framer-motion";
-import { useEffect, useRef, useState } from "react";
+import { motion, AnimatePresence } from "framer-motion";
+import { useEffect, useRef, useState, useMemo } from "react";
 import { gsap } from "gsap";
 import { useGSAP } from "@gsap/react";
 import {
@@ -15,25 +15,95 @@ import {
   FlaskConical,
   Award,
   HeartPulse,
+  Leaf,
+  ChevronRight,
 } from "lucide-react";
-import { byCategory } from "@/lib/products";
 import { ProductCard } from "@/components/ProductCard";
+import { TextButton } from "@/components/ui/text-button";
 import { ReviewMarquee } from "@/components/ui/review-marquee";
 import { FlowButton } from "@/components/ui/flow-button";
 import { ButtonWithIcon } from "@/components/ui/button-with-icon";
+import { useStoreSettings } from "@/components/StoreSettingsProvider";
+
 import {
   IdentityCardBody,
   RevealCardContainer,
 } from "@/components/ui/animated-profile-card";
-import { ProductSkeleton } from "@/components/ui/skeleton";
+import { ProductSkeleton } from "@/components/ProductSkeleton";
 
 export default function HomePage() {
+  const { settings } = useStoreSettings();
+  const [categories, setCategories] = useState([]);
+
+  useEffect(() => {
+    fetch("/api/categories")
+      .then((r) => r.json())
+      .then(setCategories);
+  }, []);
+
+  const supplementsVisible = useMemo(
+    () => categories.find((c) => c.slug === "supplements")?.visible !== false,
+    [categories],
+  );
+  const electronicsVisible = useMemo(
+    () => categories.find((c) => c.slug === "electronics")?.visible !== false,
+    [categories],
+  );
+
   return (
     <>
+      
       <Hero />
+      <Bestsellers />
       <Marquee />
       <WhyChooseUs />
-      <ElectronicsShowcase />
+
+      {/* Nutrition Section */}
+      <section className="py-20 bg-muted/20">
+        <div className="mx-auto max-w-7xl px-5 lg:px-8">
+          <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-12">
+            <div>
+              <div className="text-xs uppercase tracking-[0.3em] text-health font-bold">
+                Daily Essentials
+              </div>
+              <h2 className="mt-3 font-display text-4xl font-bold">
+                {settings?.supplementsTitle || "Nutrition & Wellness"}
+              </h2>
+            </div>
+            <Link
+              href="/supplements"
+              className="group flex items-center gap-3 text-xs font-black uppercase tracking-widest hover:text-health transition-colors">
+              View Collection{" "}
+              <ChevronRight className="h-4 w-4 group-hover:translate-x-1 transition-transform" />
+            </Link>
+          </div>
+          <SupplementsShowcase visible={supplementsVisible} />
+        </div>
+      </section>
+
+      {/* Electronics Section */}
+      <section className="py-20">
+        <div className="mx-auto max-w-7xl px-5 lg:px-8">
+          <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-12">
+            <div>
+              <div className="text-xs uppercase tracking-[0.3em] text-tech font-bold">
+                Next-Gen Tech
+              </div>
+              <h2 className="mt-3 font-display text-4xl font-bold">
+                {settings?.electronicsTitle || "Electronics & Gear"}
+              </h2>
+            </div>
+            <Link
+              href="/electronics"
+              className="group flex items-center gap-3 text-xs font-black uppercase tracking-widest hover:text-tech transition-colors">
+              View Collection{" "}
+              <ChevronRight className="h-4 w-4 group-hover:translate-x-1 transition-transform" />
+            </Link>
+          </div>
+          <ElectronicsShowcase visible={electronicsVisible} />
+        </div>
+      </section>
+
       <ReviewMarquee />
       <CTABand />
     </>
@@ -42,31 +112,25 @@ export default function HomePage() {
 
 function Hero() {
   const heroRef = useRef(null);
-  const [settings, setSettings] = useState(null);
-  const [featured, setFeatured] = useState([]);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    fetch("/api/settings")
-      .then((r) => r.json())
-      .then((data) => {
-        if (data.settings) setSettings(data.settings);
-      });
-
-    fetch("/api/products?category=supplements&limit=4")
-      .then((r) => r.json())
-      .then((data) => {
-        setFeatured((data.products || []).slice(0, 4));
-        setLoading(false);
-      })
-      .catch(() => setLoading(false));
-  }, []);
-
+  const { settings } = useStoreSettings();
   const heroTitle =
     settings?.heroTitle || "Fuel your strength. Trust your source.";
   const heroDescription =
     settings?.heroDescription ||
-    "Authentic supplements, premium ingredients, and the trusted service Pakistan deserves. From protein to wellness — all in one place.";
+    "Authentic supplements, premium ingredients, and the trusted service Pakistan deserves.";
+  const [visibleCategories, setVisibleCategories] = useState([]);
+
+  useEffect(() => {
+    fetch("/api/categories")
+      .then((r) => r.json())
+      .then((cats) => {
+        const visibleSlugs =
+          Array.isArray(cats) ?
+            cats.filter((c) => c.visible !== false).map((c) => c.slug)
+          : [];
+        setVisibleCategories(visibleSlugs);
+      });
+  }, []);
 
   useGSAP(
     () => {
@@ -92,13 +156,6 @@ function Hero() {
         ease: "expo.out",
         delay: 0.1,
       });
-      gsap.from(".hero-products", {
-        opacity: 0,
-        y: 40,
-        duration: 1.0,
-        ease: "expo.out",
-        delay: 1.0,
-      });
     },
     { scope: heroRef, dependencies: [heroTitle] },
   );
@@ -106,11 +163,9 @@ function Hero() {
   return (
     <section
       ref={heroRef}
-      className="relative min-h-[100svh] overflow-hidden pt-16 bg-hero-gradient">
-      <div className="relative mx-auto max-w-7xl px-5 lg:px-8 flex flex-col gap-10 py-20 lg:py-24 min-h-[100svh] justify-center">
-        {/* Top two-column row */}
-        <div className="grid lg:grid-cols-2 gap-10 items-center">
-          {/* Left: copy */}
+      className="relative min-h-svh overflow-hidden pt-24 bg-hero-gradient">
+      <div className="relative mx-auto max-w-7xl px-5 lg:px-8 flex flex-col justify-center min-h-[calc(100svh-96px)]">
+        <div className="grid lg:grid-cols-2 gap-12 items-center">
           <div className="relative z-10">
             <div className="hero-fade inline-flex items-center gap-2 px-4 py-2 rounded-full glass text-xs font-medium text-primary shadow-sm">
               <Sparkles className="h-3.5 w-3.5" />
@@ -118,7 +173,6 @@ function Hero() {
                 Premium Nutrition · Pakistan
               </span>
             </div>
-
             <h1 className="mt-6 font-display text-5xl sm:text-6xl lg:text-7xl font-semibold leading-[0.95] tracking-tight text-foreground">
               {heroTitle
                 .split(".")
@@ -126,111 +180,88 @@ function Hero() {
                 .map((part, i) => (
                   <span key={i} className="block overflow-hidden">
                     <span
-                      className={`hero-line block ${
-                        i === 0 ? "" : "font-serif-italic text-gradient-gold"
-                      }`}>
+                      className={`hero-line block ${i === 0 ? "" : "font-serif-italic text-gradient-gold"}`}>
                       {part.trim()}.
                     </span>
                   </span>
                 ))}
             </h1>
-
             <p className="hero-fade mt-6 text-base sm:text-lg text-muted-foreground max-w-lg leading-relaxed">
               {heroDescription}
             </p>
-
-            <div className="hero-fade mt-8 flex flex-wrap items-center gap-3">
-              <ButtonWithIcon
-                as={Link}
-                href="/supplements"
-                icon={ArrowRight}
-                className="bg-primary text-primary-foreground hover:bg-primary hover:text-primary-foreground shadow-glow-health">
-                Shop Nutrition
-              </ButtonWithIcon>
-              <ButtonWithIcon
-                as={Link}
-                href="/electronics"
-                icon={Cpu}
-                className="bg-card text-foreground border border-border hover:bg-card hover:text-foreground hover:border-tech/40 shadow-sm"
-                iconClassName="text-tech group-hover:rotate-0">
-                Explore Electronics
-              </ButtonWithIcon>
-            </div>
-
-            <div className="hero-fade mt-10 flex flex-wrap items-center gap-x-6 gap-y-3 text-sm">
-              <div className="flex items-center gap-2">
-                <div className="flex text-gold">
-                  {Array.from({ length: 5 }).map((_, i) => (
-                    <svg
-                      key={i}
-                      className="h-4 w-4 fill-current"
-                      viewBox="0 0 20 20">
-                      <path d="M10 1.5l2.6 5.3 5.9.9-4.3 4.2 1 5.9L10 15l-5.3 2.8 1-5.9L1.5 7.7l5.9-.9z" />
-                    </svg>
-                  ))}
-                </div>
-                <span className="font-semibold text-foreground">4.9</span>
-                <span className="text-muted-foreground">
-                  from 1,200+ orders
-                </span>
-              </div>
-              <div className="flex items-center gap-2 text-foreground/80">
-                <ShieldCheck className="h-4 w-4 text-primary" />
-                <span className="font-medium">Authentic guarantee</span>
-              </div>
+            <div className="hero-fade mt-10 flex flex-wrap items-center gap-3">
+              {visibleCategories.includes("supplements") && (
+                <ButtonWithIcon
+                  as={Link}
+                  href="/supplements"
+                  icon={ArrowRight}
+                  className="bg-primary text-primary-foreground hover:bg-primary shadow-glow-health">
+                  {settings?.heroButtonText || "Shop Nutrition"}
+                </ButtonWithIcon>
+              )}
             </div>
           </div>
-
-          {/* Right: hero image */}
           <div className="hero-img relative">
             <div className="relative aspect-[4/3] lg:aspect-[5/5] w-full rounded-3xl overflow-hidden shadow-elevated animate-float">
               <img
-                src="/hero-nutrition.jpg"
-                alt="Premium whey protein supplement with fresh greens and almonds"
+                src={settings?.heroImage || "https://res.cloudinary.com/dxhvfs4he/image/upload/v1779030421/sabir-shah/assets/new-hero-image.webp"}
+                alt="Premium nutrition"
                 className="absolute inset-0 h-full w-full object-cover"
               />
             </div>
-            <div className="hero-fade absolute -bottom-6 -left-4 sm:left-6 bg-card rounded-2xl shadow-elevated px-5 py-4 flex items-center gap-3 border border-border">
-              <div className="h-10 w-10 rounded-full bg-primary/10 grid place-items-center">
-                <HeartPulse className="h-5 w-5 text-primary" />
-              </div>
-              <div>
-                <div className="text-sm font-bold text-foreground">
-                  24g Protein
-                </div>
-                <div className="text-xs text-muted-foreground">Per scoop</div>
-              </div>
-            </div>
           </div>
         </div>
+      </div>
+    </section>
+  );
+}
 
-        {/* Bottom: 4 bestseller products + View all button */}
-        <div className="hero-products">
-          <p className="text-xs uppercase tracking-[0.3em] text-muted-foreground font-medium mb-5">
+function Bestsellers() {
+  const [featured, setFeatured] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    Promise.all([
+      fetch("/api/categories").then((r) => r.json()),
+      fetch("/api/products", { cache: "no-store" }).then((r) => r.json()),
+    ])
+      .then(([cats, prodData]) => {
+        const allProducts = prodData.products || [];
+        const visibleSlugs =
+          Array.isArray(cats) ?
+            cats.filter((c) => c.visible !== false).map((c) => c.slug)
+          : [];
+        const visibleProducts = allProducts.filter(
+          (p) => visibleSlugs.includes(p.category) && p.bestseller,
+        );
+        setFeatured(visibleProducts.slice(0, 4));
+        setLoading(false);
+      })
+      .catch(() => setLoading(false));
+  }, []);
+
+  if (loading) return null;
+  if (featured.length === 0) return null;
+
+  return (
+    <section className="py-12 bg-white/50 relative">
+      <div className="mx-auto max-w-7xl px-5 lg:px-8">
+        <div className="flex items-center gap-4 mb-8">
+          <div className="h-px flex-1 bg-border/60" />
+          <p className="text-[10px] uppercase tracking-[0.4em] text-muted-foreground font-bold">
             Bestsellers
           </p>
-
-          <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
-            {loading ?
-              Array.from({ length: 4 }).map((_, i) => (
-                <ProductSkeleton key={i} />
-              ))
-            : featured.map((p, i) => (
-                <ProductCard key={p._id} product={p} index={i} />
-              ))
-            }
-          </div>
-
-          {!loading && (
-            <div className="mt-8 flex justify-center">
-              <FlowButton
-                as={Link}
-                href="/supplements"
-                text="View all products"
-                className="bg-primary text-black border-primary hover:text-white"
-              />
-            </div>
-          )}
+          <div className="h-px flex-1 bg-border/60" />
+        </div>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+          {featured.slice(0, 4).map((p, i) => (
+            <ProductCard key={p._id} product={p} index={i} />
+          ))}
+        </div>
+        <div className="mt-6 flex justify-center">
+          <Link href="/bestsellers">
+            <TextButton text="Show More" />
+          </Link>
         </div>
       </div>
     </section>
@@ -268,37 +299,37 @@ function WhyChooseUs() {
     {
       icon: ShieldCheck,
       title: "100% Authentic",
-      desc: "Sourced directly from verified suppliers — every bottle is genuine, every time.",
+      desc: "Sourced directly from verified suppliers.",
       accent: "#e0f2fe",
     },
     {
       icon: FlaskConical,
       title: "Lab-tested quality",
-      desc: "Only products from reputable, lab-tested brands make it onto our shelves.",
+      desc: "Only products from reputable brands.",
       accent: "#f0fdf4",
     },
     {
       icon: Truck,
       title: "Fast delivery",
-      desc: "Reliable shipping across Pakistan with cash on delivery available everywhere.",
+      desc: "Reliable shipping across Pakistan.",
       accent: "#fff7ed",
     },
     {
       icon: HeartPulse,
       title: "Goal-driven",
-      desc: "From muscle building to daily wellness — formulas matched to real results.",
+      desc: "Formulas matched to real results.",
       accent: "#fdf2f8",
     },
     {
       icon: MessageCircle,
       title: "Expert support",
-      desc: "Talk to a real human for product advice, dosage, and order help.",
+      desc: "Talk to a real human for help.",
       accent: "#f5f3ff",
     },
     {
       icon: Award,
       title: "Athlete trusted",
-      desc: "Recommended by gym goers, athletes, and health-conscious families.",
+      desc: "Recommended by pros.",
       accent: "#fefce8",
     },
   ];
@@ -315,11 +346,9 @@ function WhyChooseUs() {
             Nutrition done right.
           </h2>
           <p className="mt-4 text-muted-foreground">
-            Pakistan deserves supplements you can actually trust. Here&apos;s
-            what makes us different.
+            Pakistan deserves supplements you can actually trust.
           </p>
         </div>
-
         <div className="mt-14 grid gap-8 sm:grid-cols-2 lg:grid-cols-3">
           {items.map((it, i) => (
             <motion.div
@@ -327,11 +356,7 @@ function WhyChooseUs() {
               initial={{ opacity: 0, y: 30 }}
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true, margin: "-50px" }}
-              transition={{
-                duration: 0.6,
-                delay: i * 0.06,
-                ease: [0.22, 1, 0.36, 1],
-              }}>
+              transition={{ duration: 0.6, delay: i * 0.06 }}>
               <RevealCardContainer
                 accent={it.accent}
                 textOnAccent="#0f172a"
@@ -365,66 +390,95 @@ function WhyChooseUs() {
   );
 }
 
-function ElectronicsShowcase() {
-  const electronicsCount = byCategory("electronics").length;
-  return (
-    <section className="py-20 lg:py-28">
-      <div className="mx-auto max-w-7xl px-5 lg:px-8">
-        <motion.div
-          initial={{ opacity: 0, y: 30 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true, margin: "-80px" }}
-          transition={{ duration: 0.8, ease: [0.22, 1, 0.36, 1] }}>
-          <Link
-            href="/electronics"
-            className="group relative block overflow-hidden rounded-3xl glass aspect-[16/10] sm:aspect-[16/7] lg:aspect-[16/6]">
-            <div className="absolute inset-0 bg-gradient-to-br from-tech/30 via-background to-background" />
-            <div className="absolute inset-0 grid-bg opacity-40" />
-            <div className="absolute -top-24 -right-24 h-72 w-72 rounded-full bg-tech/30 blur-3xl group-hover:scale-110 transition-transform duration-700" />
-            <div className="absolute -bottom-32 right-1/4 h-72 w-72 rounded-full bg-tech/20 blur-3xl" />
+function SupplementsShowcase({ visible }) {
+  const [products, setProducts] = useState([]);
+  const [loading, setLoading] = useState(true);
 
-            <div className="relative h-full flex flex-col justify-center px-7 sm:px-12 lg:px-16 max-w-2xl">
-              <div className="inline-flex items-center gap-2 text-xs uppercase tracking-[0.3em] text-muted-foreground">
-                <span className="h-7 w-7 rounded-full bg-tech text-tech-foreground grid place-items-center">
-                  <Cpu className="h-3.5 w-3.5" />
-                </span>
-                Electronics
-                {electronicsCount === 0 && (
-                  <span className="text-[10px] px-2 py-0.5 rounded-full bg-tech/15 text-tech font-bold tracking-wider">
-                    Coming Soon
-                  </span>
-                )}
-              </div>
-              <h3 className="mt-4 font-display text-3xl sm:text-4xl lg:text-5xl font-bold leading-tight">
-                {electronicsCount > 0 ?
-                  <>
-                    Premium tech,{" "}
-                    <span className="text-gradient-tech">curated.</span>
-                  </>
-                : <>
-                    Premium tech is{" "}
-                    <span className="text-gradient-tech">on the way.</span>
-                  </>
-                }
-              </h3>
-              <p className="mt-3 text-sm sm:text-base text-muted-foreground max-w-md">
-                {electronicsCount > 0 ?
-                  "Browse hand-picked headphones, smartwatches, and speakers."
-                : "Headphones, smartwatches, speakers and more — launching soon."
-                }
-              </p>
-              <FlowButton
-                text={
-                  electronicsCount > 0 ? "Explore showroom" : "Visit showroom"
-                }
-                className="mt-6 w-fit"
-                as="div"
-              />
-            </div>
-          </Link>
-        </motion.div>
+  useEffect(() => {
+    if (!visible) {
+      setLoading(false);
+      return;
+    }
+    fetch(`/api/products?category=supplements&limit=4`)
+      .then((r) => r.json())
+      .then((data) => {
+        setProducts(data.products || []);
+        setLoading(false);
+      });
+  }, [visible]);
+
+  if (loading)
+    return (
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+        {Array.from({ length: 4 }).map((_, i) => (
+          <ProductSkeleton key={i} />
+        ))}
       </div>
-    </section>
+    );
+
+  if (!visible)
+    return (
+      <div className="col-span-full py-20 flex flex-col items-center justify-center border-2 border-dashed border-border rounded-2xl glass">
+        <div className="h-16 w-16 rounded-full bg-muted grid place-items-center mb-4">
+          🚀
+        </div>
+        <h3 className="text-xl font-bold mb-2">Coming Soon</h3>
+        <p className="text-muted-foreground">Restocking soon.</p>
+      </div>
+    );
+
+  return (
+    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+      {products.slice(0, 4).map((p, i) => (
+        <ProductCard key={p._id} product={p} index={i} />
+      ))}
+    </div>
+  );
+}
+
+function ElectronicsShowcase({ visible }) {
+  const [products, setProducts] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    if (!visible) {
+      setLoading(false);
+      return;
+    }
+    fetch(`/api/products?category=electronics&limit=4`)
+      .then((r) => r.json())
+      .then((data) => {
+        setProducts(data.products || []);
+        setLoading(false);
+      });
+  }, [visible]);
+
+  if (loading)
+    return (
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+        {Array.from({ length: 4 }).map((_, i) => (
+          <ProductSkeleton key={i} />
+        ))}
+      </div>
+    );
+
+  if (!visible)
+    return (
+      <div className="col-span-full py-20 flex flex-col items-center justify-center border-2 border-dashed border-border rounded-2xl glass">
+        <div className="h-16 w-16 rounded-full bg-muted grid place-items-center mb-4">
+          🔌
+        </div>
+        <h3 className="text-xl font-bold mb-2">Coming Soon</h3>
+        <p className="text-muted-foreground">Tech showroom opening soon.</p>
+      </div>
+    );
+
+  return (
+    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+      {products.slice(0, 4).map((p, i) => (
+        <ProductCard key={p._id} product={p} index={i} />
+      ))}
+    </div>
   );
 }
 
@@ -434,32 +488,18 @@ function CTABand() {
       <div className="absolute inset-0 bg-hero-gradient grid-bg" />
       <div className="absolute inset-0 noise" />
       <div className="relative mx-auto max-w-5xl px-5 lg:px-8 text-center">
-        <motion.h2
-          initial={{ opacity: 0, y: 30 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true }}
-          transition={{ duration: 0.7 }}
-          className="font-display text-4xl sm:text-5xl lg:text-6xl font-bold leading-tight">
+        <h2 className="font-display text-4xl sm:text-5xl lg:text-6xl font-bold leading-tight">
           Ready to fuel your{" "}
           <span className="text-gradient-health">best self</span>?
-        </motion.h2>
-        <p className="mt-5 text-muted-foreground max-w-xl mx-auto">
-          Browse the full nutrition catalog or place an order instantly via
-          WhatsApp.
-        </p>
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true }}
-          transition={{ duration: 0.7, delay: 0.1 }}
-          className="mt-10 flex flex-wrap justify-center gap-4">
+        </h2>
+        <div className="mt-10 flex flex-wrap justify-center gap-4">
           <FlowButton
             as={Link}
             href="/supplements"
             text="Start your journey"
             className="bg-primary text-black border-primary hover:text-white"
           />
-        </motion.div>
+        </div>
       </div>
     </section>
   );

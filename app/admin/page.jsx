@@ -1,205 +1,374 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Package, ShoppingCart, MessageCircle, DollarSign, TrendingUp, Users, ArrowUpRight, Plus, Eye, Settings2, Sparkles } from "lucide-react";
-import { formatPKR } from "@/lib/products";
-import { motion } from "framer-motion";
+import { useRouter } from "next/navigation";
+import {
+  AdminSpinner,
+  AdminError,
+} from "@/components/admin/AdminShared";
+import {
+  Package,
+  ShoppingCart,
+  DollarSign,
+  TrendingUp,
+  Users,
+  ArrowUpRight,
+  ArrowDownRight,
+  Plus,
+  Settings2,
+  BarChart2,
+  ChevronRight,
+  Loader2,
+  AlertCircle,
+  Globe,
+} from "lucide-react";
+
 import Link from "next/link";
+import { formatPKR } from "@/lib/payments";
 
-export default function AdminDashboard() {
-  const [stats, setStats] = useState(null);
+const STATUS_STYLES = {
+  pending: "bg-amber-100 text-amber-700",
+  confirmed: "bg-blue-100 text-blue-700",
+  processing: "bg-indigo-100 text-indigo-700",
+  shipped: "bg-purple-100 text-purple-700",
+  delivered: "bg-emerald-100 text-emerald-700",
+  cancelled: "bg-red-100 text-red-700",
+  refunded: "bg-gray-100 text-gray-600",
+};
 
-  useEffect(() => {
-    fetch("/api/admin/stats")
-      .then((r) => r.json())
-      .then((d) => setStats(d));
-  }, []);
-
-  if (!stats) return (
-    <div className="h-[60vh] flex items-center justify-center">
-      <div className="h-12 w-12 border-4 border-primary/20 border-t-primary rounded-full animate-spin" />
-    </div>
-  );
-
-  const container = {
-    hidden: { opacity: 0 },
-    show: {
-      opacity: 1,
-      transition: { staggerChildren: 0.1 }
-    }
-  };
-
-  const item = {
-    hidden: { opacity: 0, y: 20 },
-    show: { opacity: 1, y: 0, transition: { duration: 0.6, ease: [0.22, 1, 0.36, 1] } }
-  };
-
-  const cards = [
-    { label: "Gross Revenue", value: formatPKR(stats.revenue || 0), icon: DollarSign, trend: "+12.5%", color: "text-emerald-400", bg: "bg-emerald-500/10" },
-    { label: "Total Orders", value: stats.orderCount || 0, icon: ShoppingCart, trend: "+8.2%", color: "text-blue-400", bg: "bg-blue-500/10" },
-    { label: "Conversion Rate", value: "3.42%", icon: TrendingUp, trend: "+1.2%", color: "text-purple-400", bg: "bg-purple-500/10" },
-    { label: "Live Visitors", value: "12", icon: Users, trend: "Live now", color: "text-orange-400", bg: "bg-orange-500/10" },
-  ];
+function StatCard({
+  label,
+  value,
+  growth,
+  icon: Icon,
+  colorClass = "text-primary",
+  bgClass = "bg-primary/10",
+  glowClass = "shadow-glow-primary",
+}) {
+  const positive = growth >= 0;
 
   return (
-    <motion.div variants={container} initial="hidden" animate="show" className="space-y-10">
-      <motion.div variants={item} className="flex flex-col md:flex-row md:items-end justify-between gap-6">
-        <div>
-           <div className="flex items-center gap-2 text-primary text-xs font-bold uppercase tracking-[0.3em] mb-2">
-             <div className="h-2 w-2 rounded-full bg-primary animate-pulse" />
-             Live Dashboard
-           </div>
-           <h1 className="font-display text-4xl lg:text-5xl font-bold tracking-tight">Overview</h1>
-           <p className="text-white/40 mt-2 text-sm lg:text-base">Command center for Sabir Shah Traders. Everything looks stable today.</p>
+    <div className="group bg-card rounded-2xl border border-border p-4 shadow-sm hover:shadow-xl hover:border-primary/20 transition-all duration-300">
+      <div className="flex items-center justify-between mb-3">
+        <div
+          className={`h-9 w-9 rounded-xl ${bgClass} flex items-center justify-center transition-transform duration-300 group-hover:scale-110 group-hover:rotate-3 shadow-sm`}>
+          <Icon className={`h-4 w-4 ${colorClass}`} />
         </div>
-        <div className="flex flex-wrap items-center gap-3">
-           <Link href="/admin/customize" className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-primary text-black font-semibold text-sm hover:scale-[1.02] transition-transform shadow-glow-primary">
-             <Settings2 className="h-4 w-4" /> Edit Website
-           </Link>
-           <Link href="/admin/products?new=true" className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-white/5 border border-white/10 text-white font-semibold text-sm hover:bg-white/10 transition-colors">
-             <Plus className="h-4 w-4" /> Add Product
-           </Link>
-        </div>
-      </motion.div>
 
-      <motion.div variants={item} className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
-        {cards.map((c) => (
-          <div key={c.label} className="group relative rounded-3xl border border-white/5 bg-white/[0.03] p-8 overflow-hidden hover:bg-white/[0.05] transition-colors">
-            <div className={`absolute top-0 right-0 w-24 h-24 blur-[60px] opacity-20 transition-opacity group-hover:opacity-40 ${c.bg}`} />
-            <div className="relative z-10">
-              <div className="flex items-center justify-between">
-                <div className={`h-12 w-12 rounded-2xl ${c.bg} flex items-center justify-center ${c.color}`}>
-                  <c.icon className="h-6 w-6" />
-                </div>
-                <div className="text-[10px] font-bold uppercase tracking-widest px-2 py-1 rounded-lg bg-white/5 text-white/40">
-                  {c.trend}
-                </div>
-              </div>
-              <div className="mt-6">
-                <div className="text-sm font-medium text-white/40 uppercase tracking-wider">{c.label}</div>
-                <div className="mt-2 font-display text-4xl font-bold tracking-tight">{c.value}</div>
-              </div>
+        <span
+          className={`flex items-center gap-1 text-[9px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full ${
+            positive ?
+              "bg-green-50 text-green-600 border border-green-100"
+            : "bg-red-50 text-red-500 border border-red-100"
+          }`}>
+          {positive ?
+            <ArrowUpRight className="h-2.5 w-2.5" />
+          : <ArrowDownRight className="h-2.5 w-2.5" />}
+          {Math.abs(growth)}%
+        </span>
+      </div>
+
+      <div className="text-xl font-black text-foreground tracking-tight">
+        {typeof value === "number" ? value.toLocaleString() : value}
+      </div>
+
+      <div className="text-[9px] font-black text-muted-foreground uppercase tracking-widest mt-1 opacity-60">
+        {label}
+      </div>
+    </div>
+  );
+}
+
+export default function AdminDashboard() {
+  const router = useRouter();
+
+  const [stats, setStats] = useState({
+    revenue: { total: 0, today: 0, week: 0, month: 0 },
+    orderCount: 0,
+    productCount: 0,
+    reviewCount: 0,
+    pendingOrders: 0,
+    recentOrders: [],
+    avgOrderValue: 0,
+    conversionRate: 0,
+  });
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+
+  // AUTH CHECK & STATS FETCH
+  useEffect(() => {
+    const loadDashboard = async () => {
+      try {
+        // Check auth
+        const authRes = await fetch("/api/admin/check-auth", {
+          method: "GET",
+          credentials: "include",
+        });
+
+        if (!authRes.ok) {
+          router.push("/admin-login");
+          return;
+        }
+
+        // Fetch stats
+        const statsRes = await fetch("/api/admin/stats", {
+          method: "GET",
+          credentials: "include",
+        });
+
+        if (statsRes.ok) {
+          const data = await statsRes.json();
+          setStats(data);
+          setError(null);
+        } else {
+          throw new Error("Failed to fetch stats");
+        }
+      } catch (err) {
+        console.error("Dashboard error:", err);
+        setError(err.message);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadDashboard();
+  }, [router]);
+
+  if (loading) {
+    return <AdminSpinner className="h-[70vh]" />;
+  }
+
+  if (error) {
+    return (
+      <div className="flex items-center justify-center h-[70vh]">
+        <AdminError message={error} onRetry={() => window.location.reload()} />
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-8">
+      {/* HEADER */}
+      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+        <div>
+          <h1 className="text-xl font-bold text-foreground uppercase tracking-tight">
+            Dashboard
+          </h1>
+          <p className="text-[10px] text-muted-foreground mt-0.5 uppercase tracking-widest font-medium">
+            Performance overview for your store
+          </p>
+        </div>
+
+        <div className="flex items-center gap-3">
+          <Link
+            href="/admin/analytics"
+            className="flex items-center gap-2 px-4 py-2 rounded-xl border border-border bg-card text-sm font-medium text-foreground hover:bg-muted transition-colors">
+            <BarChart2 className="h-4 w-4" />
+            Reports
+          </Link>
+
+          <Link
+            href="/admin/products?new=true"
+            className="flex items-center gap-2 px-4 py-2 rounded-xl bg-primary text-primary-foreground text-sm font-medium hover:bg-primary/90 transition-all shadow-glow-primary">
+            <Plus className="h-4 w-4" />
+            Add Product
+          </Link>
+        </div>
+      </div>
+
+      {/* STATS */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-6">
+        <StatCard
+          label="Total Revenue"
+          value={formatPKR(stats.revenue?.total || 0)}
+          growth={12.5}
+          icon={DollarSign}
+        />
+
+        <StatCard
+          label="Total Orders"
+          value={stats.orderCount || 0}
+          growth={8.2}
+          icon={ShoppingCart}
+          colorClass="text-blue-600"
+          bgClass="bg-blue-50"
+        />
+
+        <StatCard
+          label="Products"
+          value={stats.productCount || 0}
+          growth={5.3}
+          icon={Package}
+          colorClass="text-purple-600"
+          bgClass="bg-purple-50"
+        />
+
+        <StatCard
+          label="Pending Orders"
+          value={stats.pendingOrders || 0}
+          growth={stats.pendingOrders > 0 ? -5 : 0}
+          icon={TrendingUp}
+          colorClass="text-amber-600"
+          bgClass="bg-amber-50"
+        />
+      </div>
+
+      {/* TODAY'S SUMMARY */}
+      <div className="bg-card rounded-2xl border border-border p-5 shadow-sm">
+        <h2 className="text-sm font-black text-foreground uppercase tracking-widest mb-4">
+          Today&apos;s Summary
+        </h2>
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          <div className="p-4 bg-muted/50 rounded-xl border border-border/50">
+            <div className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">
+              Orders Today
+            </div>
+            <div className="text-xl font-bold text-foreground">
+              {stats.today?.orders || 0}
             </div>
           </div>
-        ))}
-      </motion.div>
+          <div className="p-4 bg-muted/50 rounded-xl border border-border/50">
+            <div className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">
+              Revenue Today
+            </div>
+            <div className="text-xl font-bold text-primary">
+              {formatPKR(stats.today?.revenue || 0)}
+            </div>
+          </div>
+          <div className="p-4 bg-muted/50 rounded-xl border border-border/50">
+            <div className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">
+              Avg Order Value
+            </div>
+            <div className="text-xl font-bold text-foreground">
+              {formatPKR(stats.avgOrderValue || 0)}
+            </div>
+          </div>
+        </div>
+      </div>
 
-      <div className="grid gap-6 lg:grid-cols-3">
-         <motion.div variants={item} className="lg:col-span-2 rounded-3xl border border-white/5 bg-white/[0.03] p-8">
-            <div className="flex items-center justify-between mb-8">
-               <h3 className="font-display text-xl font-bold tracking-tight uppercase">Revenue Analytics</h3>
-               <div className="flex items-center gap-4">
-                 <select className="bg-white/5 border border-white/10 text-xs px-3 py-1.5 rounded-lg outline-none focus:border-primary/50">
-                    <option>Last 7 Days</option>
-                    <option>Last 30 Days</option>
-                    <option>Year to Date</option>
-                 </select>
-               </div>
-            </div>
-            {/* Chart Area */}
-            <div className="h-64 w-full flex items-end gap-2">
-               {Array.from({ length: 14 }).map((_, i) => (
-                 <motion.div 
-                   key={i}
-                   initial={{ height: 0 }}
-                   animate={{ height: `${Math.random() * 60 + 20}%` }}
-                   transition={{ duration: 1, delay: i * 0.05 + 0.5 }}
-                   className="flex-1 bg-gradient-to-t from-primary/5 to-primary/30 rounded-t-lg relative group"
-                 >
-                    <div className="absolute -top-8 left-1/2 -translate-x-1/2 opacity-0 group-hover:opacity-100 transition-opacity bg-white text-black text-[10px] font-bold px-1.5 py-0.5 rounded shadow-xl">
-                      {Math.floor(Math.random() * 50)}k
-                    </div>
-                 </motion.div>
-               ))}
-            </div>
-            <div className="mt-4 flex justify-between text-[10px] text-white/20 uppercase tracking-widest font-bold px-1">
-               <span>Mon</span><span>Wed</span><span>Fri</span><span>Sun</span><span>Tue</span><span>Thu</span><span>Sat</span>
-            </div>
-         </motion.div>
+      {/* QUICK ACTIONS */}
+      <div className="bg-card rounded-2xl border border-border p-5 shadow-sm">
+        <h2 className="text-sm font-black text-foreground uppercase tracking-widest mb-5">
+          Quick Actions
+        </h2>
 
-         <motion.div variants={item} className="rounded-3xl border border-white/5 bg-white/[0.03] p-8 flex flex-col">
-            <h3 className="font-display text-xl font-bold tracking-tight uppercase mb-6">Low Stock Alerts</h3>
-            <div className="space-y-4 flex-1">
-               {[
-                 { name: "Whey Isolate 2kg", stock: 3, color: "text-red-400" },
-                 { name: "Omega 3 Fish Oil", stock: 0, color: "text-red-500" },
-                 { name: "Daily Multivitamin", stock: 5, color: "text-orange-400" },
-               ].map((s) => (
-                 <div key={s.name} className="flex items-center justify-between p-4 rounded-2xl bg-white/5">
-                    <div className="text-sm font-medium">{s.name}</div>
-                    <div className={`text-xs font-bold ${s.color}`}>
-                      {s.stock === 0 ? "Out of Stock" : `${s.stock} left`}
-                    </div>
-                 </div>
-               ))}
-            </div>
-            <Link href="/admin/products" className="mt-6 w-full text-center py-3 rounded-xl bg-white/5 text-xs font-bold uppercase tracking-widest hover:bg-white/10 transition-colors">
-              Manage Inventory
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+          {[
+            {
+              label: "Products",
+              href: "/admin/products",
+              icon: Package,
+            },
+            {
+              label: "Orders",
+              href: "/admin/orders",
+              icon: ShoppingCart,
+            },
+            {
+              label: "Analytics",
+              href: "/admin/analytics",
+              icon: BarChart2,
+            },
+            {
+              label: "Customers",
+              href: "/admin/customers",
+              icon: Users,
+            },
+            {
+              label: "Settings",
+              href: "/admin/settings",
+              icon: Settings2,
+            },
+            {
+              label: "SEO",
+              href: "/admin/seo",
+              icon: Globe,
+            },
+          ].map((item) => (
+            <Link
+              key={item.label}
+              href={item.href}
+              className="flex flex-col items-center gap-2 p-4 rounded-xl border border-border bg-card hover:border-primary/30 hover:bg-muted/30 transition-all group">
+              <div className="h-9 w-9 rounded-lg bg-primary/10 flex items-center justify-center group-hover:scale-110 transition-transform">
+                <item.icon className="h-4 w-4 text-primary" />
+              </div>
+
+              <span className="text-[11px] font-bold text-foreground uppercase tracking-tight">
+                {item.label}
+              </span>
             </Link>
-         </motion.div>
+          ))}
+        </div>
       </div>
 
-      <div className="grid gap-6 lg:grid-cols-2">
-         <motion.div variants={item} className="rounded-3xl border border-white/5 bg-white/[0.03] p-8">
-            <div className="flex items-center justify-between mb-8">
-               <h3 className="font-display text-xl font-bold tracking-tight uppercase">Top Selling Products</h3>
-               <Link href="/admin/analytics" className="text-[10px] font-bold uppercase tracking-widest text-primary">View Report</Link>
-            </div>
-            <div className="space-y-5">
-               {[
-                 { name: "Pure Whey Protein", sales: 142, revenue: 1680000, img: "/p-whey.jpg" },
-                 { name: "ISO Whey Isolate", sales: 98, revenue: 832000, img: "/p-whey.jpg" },
-                 { name: "Vitamin C 1000mg", sales: 85, revenue: 161500, img: "/p-vitamins.jpg" },
-               ].map((p) => (
-                 <div key={p.name} className="flex items-center gap-4">
-                    <div className="h-12 w-12 rounded-xl bg-white/5 overflow-hidden border border-white/10">
-                       <img src={p.img} alt="" className="h-full w-full object-cover opacity-80" />
-                    </div>
-                    <div className="flex-1">
-                       <div className="text-sm font-bold">{p.name}</div>
-                       <div className="text-xs text-white/30">{p.sales} sales this month</div>
-                    </div>
-                    <div className="text-right">
-                       <div className="text-sm font-bold text-emerald-400">{formatPKR(p.revenue)}</div>
-                    </div>
-                 </div>
-               ))}
-            </div>
-         </motion.div>
+      {/* RECENT ACTIVITY */}
+      <div className="bg-card rounded-2xl border border-border shadow-sm overflow-hidden">
+        <div className="flex items-center justify-between px-5 py-3 border-b border-border bg-muted/20">
+          <h2 className="text-sm font-black text-foreground uppercase tracking-widest">
+            Recent Orders
+          </h2>
 
-         <motion.div variants={item} className="rounded-3xl border border-white/5 bg-white/[0.03] p-8">
-            <div className="flex items-center justify-between mb-8">
-               <h3 className="font-display text-xl font-bold tracking-tight uppercase">Recent Orders</h3>
-               <Link href="/admin/orders" className="text-[10px] font-bold uppercase tracking-widest text-primary">All Orders</Link>
-            </div>
-            <div className="space-y-4">
-               {[
-                 { id: "#8241", user: "Javid Ali", status: "Delivered", total: 12500 },
-                 { id: "#8242", user: "Sara Khan", status: "Pending", total: 4200 },
-                 { id: "#8243", user: "Imran Shah", status: "Processing", total: 8900 },
-               ].map((o) => (
-                 <div key={o.id} className="flex items-center justify-between p-4 rounded-2xl bg-white/5 border border-white/5">
-                    <div className="flex items-center gap-4">
-                       <div className="h-10 w-10 rounded-full bg-primary/10 text-primary flex items-center justify-center font-bold text-xs">
-                          {o.user[0]}
-                       </div>
-                       <div>
-                          <div className="text-sm font-bold">{o.user}</div>
-                          <div className="text-[10px] text-white/30 uppercase tracking-widest">{o.id}</div>
-                       </div>
+          <Link
+            href="/admin/orders"
+            className="text-[10px] font-black text-primary uppercase tracking-widest flex items-center gap-1 hover:underline">
+            View All
+            <ChevronRight className="h-3 w-3" />
+          </Link>
+        </div>
+
+        <div
+          className="divide-y divide-border/50 max-h-96 overflow-y-auto custom-scrollbar overscroll-contain"
+          data-lenis-prevent>
+          {stats.recentOrders && stats.recentOrders.length > 0 ?
+            stats.recentOrders.map((order) => {
+              const date =
+                order.createdAt ?
+                  new Date(order.createdAt).toLocaleDateString("en-PK", {
+                    day: "numeric",
+                    month: "short",
+                  })
+                : "-";
+              return (
+                <div
+                  key={order.orderNumber}
+                  className="flex items-center justify-between px-5 py-3 hover:bg-muted/20 transition-colors">
+                  <div className="flex items-center gap-3">
+                    <div className="h-9 w-9 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold text-[10px]">
+                      {order.customer?.charAt(0).toUpperCase() || "U"}
                     </div>
-                    <div className="text-right">
-                       <div className="text-sm font-bold">{formatPKR(o.total)}</div>
-                       <div className={`text-[10px] font-bold uppercase tracking-widest ${
-                         o.status === 'Delivered' ? 'text-emerald-400' : 
-                         o.status === 'Pending' ? 'text-orange-400' : 'text-blue-400'
-                       }`}>{o.status}</div>
+                    <div>
+                      <div className="text-sm font-bold text-foreground">
+                        {order.customer || "Unknown"}
+                      </div>
+                      <div className="flex items-center gap-2 text-[10px] font-medium text-muted-foreground uppercase tracking-wider">
+                        <span className="font-mono">{order.orderNumber}</span>
+                        <span>•</span>
+                        <span>{date}</span>
+                      </div>
                     </div>
-                 </div>
-               ))}
+                  </div>
+
+                  <div className="text-right">
+                    <div className="text-sm font-black text-foreground">
+                      {formatPKR(order.total || 0)}
+                    </div>
+                    <span
+                      className={`inline-block text-[9px] uppercase tracking-widest font-black px-2 py-0.5 rounded-full mt-0.5 ${
+                        STATUS_STYLES[order.status] ||
+                        "bg-muted text-muted-foreground"
+                      }`}>
+                      {order.status}
+                    </span>
+                  </div>
+                </div>
+              );
+            })
+          : <div className="px-6 py-10 text-center text-muted-foreground">
+              No recent orders found
             </div>
-         </motion.div>
+          }
+        </div>
       </div>
-    </motion.div>
+    </div>
   );
 }

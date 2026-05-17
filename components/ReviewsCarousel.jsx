@@ -85,11 +85,12 @@ export function ReviewsCarousel() {
         ) : (
           <div
             ref={scrollerRef}
-            className="mt-12 flex gap-5 overflow-x-auto snap-x snap-mandatory scroll-smooth pb-4 -mx-5 px-5 lg:-mx-8 lg:px-8 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+            className="mt-12 flex gap-5 overflow-x-auto snap-x snap-mandatory scroll-smooth pb-4 -mx-5 px-5 lg:-mx-8 lg:px-8 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden overscroll-contain"
+            data-lenis-prevent
           >
             {all.map((r, i) => (
               <motion.div
-                key={r.id}
+                key={r.id || r._id}
                 initial={{ opacity: 0, y: 30 }}
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true, margin: "-50px" }}

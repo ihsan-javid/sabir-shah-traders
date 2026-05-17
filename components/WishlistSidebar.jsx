@@ -8,6 +8,7 @@ import { formatPKR } from "@/lib/products";
 import { useEffect } from "react";
 import { TextButton } from "@/components/ui/text-button";
 import { toast } from "sonner";
+import { Tooltip } from "@/components/ui/tooltip";
 
 export function WishlistSidebar({ isOpen, onClose }) {
   const { items, toggle, clear } = useWishlist();
@@ -41,17 +42,19 @@ export function WishlistSidebar({ isOpen, onClose }) {
               <div className="font-display font-semibold text-lg flex items-center gap-2">
                 <Heart className="h-5 w-5 text-red-500 fill-red-500" /> Your Wishlist
               </div>
-              <button onClick={onClose} className="h-8 w-8 rounded-full glass grid place-items-center hover:bg-accent transition-colors group overflow-hidden">
-                <div className="relative h-4 w-4 overflow-hidden">
-                  <div className="flex flex-col transition-transform duration-500 ease-[cubic-bezier(0.22,1,0.36,1)] group-hover:-translate-y-4">
-                    <X className="h-4 w-4 shrink-0" />
-                    <X className="h-4 w-4 shrink-0" />
+              <Tooltip content="Close Wishlist" position="left">
+                <button onClick={onClose} className="h-8 w-8 rounded-full glass grid place-items-center hover:bg-accent transition-colors group overflow-hidden cursor-pointer">
+                  <div className="relative h-4 w-4 overflow-hidden">
+                    <div className="flex flex-col transition-transform duration-500 ease-[cubic-bezier(0.22,1,0.36,1)] group-hover:-translate-y-4">
+                      <X className="h-4 w-4 shrink-0" />
+                      <X className="h-4 w-4 shrink-0" />
+                    </div>
                   </div>
-                </div>
-              </button>
+                </button>
+              </Tooltip>
             </div>
 
-            <div className="flex-1 overflow-y-auto p-5">
+            <div className="flex-1 overflow-y-auto p-5 custom-scrollbar overscroll-contain" data-lenis-prevent>
               {items.length === 0 ? (
                 <div className="h-full flex flex-col items-center justify-center text-center text-muted-foreground">
                   <Heart className="h-12 w-12 mb-4 opacity-20" />
@@ -63,7 +66,7 @@ export function WishlistSidebar({ isOpen, onClose }) {
                   <AnimatePresence>
                     {items.map((product) => (
                       <motion.div
-                        key={product.id}
+                        key={product._id}
                         layout
                         initial={{ opacity: 0, scale: 0.95 }}
                         animate={{ opacity: 1, scale: 1 }}
@@ -88,17 +91,19 @@ export function WishlistSidebar({ isOpen, onClose }) {
                             >
                               <ShoppingBag className="h-3 w-3" /> Add to Cart
                             </button>
-                            <button 
-                              onClick={() => toggle(product)} 
-                              className="h-8 w-8 rounded-full glass flex items-center justify-center text-muted-foreground hover:text-destructive group overflow-hidden"
-                            >
-                                <div className="relative h-4 w-4 overflow-hidden">
-                                  <div className="flex flex-col transition-transform duration-500 ease-[cubic-bezier(0.22,1,0.36,1)] group-hover:-translate-y-4">
-                                    <Trash2 className="h-4 w-4 shrink-0" />
-                                    <Trash2 className="h-4 w-4 shrink-0" />
+                            <Tooltip content="Remove Item" position="top">
+                              <button 
+                                onClick={() => toggle(product)} 
+                                className="h-8 w-8 rounded-full glass flex items-center justify-center text-muted-foreground hover:text-destructive group overflow-hidden"
+                              >
+                                  <div className="relative h-4 w-4 overflow-hidden">
+                                    <div className="flex flex-col transition-transform duration-500 ease-[cubic-bezier(0.22,1,0.36,1)] group-hover:-translate-y-4">
+                                      <Trash2 className="h-4 w-4 shrink-0" />
+                                      <Trash2 className="h-4 w-4 shrink-0" />
+                                    </div>
                                   </div>
-                                </div>
-                            </button>
+                              </button>
+                            </Tooltip>
                           </div>
                         </div>
                       </motion.div>
@@ -113,7 +118,7 @@ export function WishlistSidebar({ isOpen, onClose }) {
                 <TextButton 
                   text="Clear Wishlist" 
                   onClick={() => {
-                    if (confirm("Clear all items?")) clear();
+                    clear();
                   }} 
                   className="w-full bg-white text-black border border-border hover:bg-red-50 hover:border-red-200 hover:text-red-600 transition-colors" 
                 />

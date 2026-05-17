@@ -5,24 +5,35 @@ import { motion, AnimatePresence } from "framer-motion";
 import { X, Search, ArrowRight } from "lucide-react";
 import Link from "next/link";
 import { formatPKR, products } from "@/lib/products";
+import { Tooltip } from "@/components/ui/tooltip";
 
 export function SearchSidebar({ isOpen, onClose }) {
   const [query, setQuery] = useState("");
+  const [allProducts, setAllProducts] = useState([]);
+  const [loading, setLoading] = useState(false);
   
   useEffect(() => {
     if (isOpen) {
       document.body.style.overflow = "hidden";
-      setQuery(""); // Reset query on open
+      setQuery(""); 
+      setLoading(true);
+      fetch("/api/products")
+        .then(r => r.json())
+        .then(data => {
+          setAllProducts(data.products || []);
+          setLoading(false);
+        })
+        .catch(() => setLoading(false));
     } else {
       document.body.style.overflow = "";
     }
     return () => { document.body.style.overflow = ""; };
   }, [isOpen]);
 
-  const results = query.trim() === "" ? [] : products.filter(p => 
+  const results = query.trim() === "" ? [] : allProducts.filter(p => 
     p.name.toLowerCase().includes(query.toLowerCase()) || 
-    p.brand.toLowerCase().includes(query.toLowerCase()) ||
-    p.category.toLowerCase().includes(query.toLowerCase())
+    p.brand?.toLowerCase().includes(query.toLowerCase()) ||
+    p.category?.toLowerCase().includes(query.toLowerCase())
   ).slice(0, 10);
 
   return (
@@ -55,17 +66,19 @@ export function SearchSidebar({ isOpen, onClose }) {
                   className="w-full rounded-full glass pl-11 pr-4 py-3 text-sm focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary outline-none"
                 />
               </div>
-              <button onClick={onClose} className="h-10 w-10 rounded-full glass grid place-items-center hover:bg-accent transition-colors shrink-0 group overflow-hidden">
-                <div className="relative h-4 w-4 overflow-hidden">
-                  <div className="flex flex-col transition-transform duration-500 ease-[cubic-bezier(0.22,1,0.36,1)] group-hover:-translate-y-4">
-                    <X className="h-4 w-4 shrink-0" />
-                    <X className="h-4 w-4 shrink-0" />
+              <Tooltip content="Close Search" position="left">
+                <button onClick={onClose} className="h-10 w-10 rounded-full glass grid place-items-center hover:bg-accent transition-colors shrink-0 group overflow-hidden cursor-pointer">
+                  <div className="relative h-4 w-4 overflow-hidden">
+                    <div className="flex flex-col transition-transform duration-500 ease-[cubic-bezier(0.22,1,0.36,1)] group-hover:-translate-y-4">
+                      <X className="h-4 w-4 shrink-0" />
+                      <X className="h-4 w-4 shrink-0" />
+                    </div>
                   </div>
-                </div>
-              </button>
+                </button>
+              </Tooltip>
             </div>
 
-            <div className="flex-1 overflow-y-auto p-5">
+            <div className="flex-1 overflow-y-auto p-5 custom-scrollbar overscroll-contain" data-lenis-prevent>
               {query.trim() !== "" && results.length === 0 && (
                 <div className="text-center text-muted-foreground mt-10">
                   No products found for "{query}"
@@ -83,7 +96,7 @@ export function SearchSidebar({ isOpen, onClose }) {
                   </div>
                   {results.map((p) => (
                     <Link
-                      key={p.id}
+                      key={p._id || p.id}
                       href={`/product/${p.slug}`}
                       onClick={onClose}
                       className="flex items-center gap-4 bg-card p-3 rounded-2xl border border-border hover:border-primary/30 transition-colors group"

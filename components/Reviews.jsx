@@ -26,7 +26,11 @@ export function StarRow({ value, size = 14 }) {
         <Star
           key={i}
           style={{ width: size, height: size }}
-          className={i <= Math.round(value) ? "fill-gold text-gold" : "text-muted-foreground/40"}
+          className={
+            i <= Math.round(value) ?
+              "fill-gold text-gold"
+            : "text-muted-foreground/40"
+          }
         />
       ))}
     </div>
@@ -45,12 +49,11 @@ export function ReviewList({ reviews, emptyMessage = "No reviews yet." }) {
     <div className="space-y-4">
       {reviews.map((r, i) => (
         <motion.div
-          key={r.id}
+          key={r.id || r._id}
           initial={{ opacity: 0, y: 12 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.4, delay: i * 0.04 }}
-          className="rounded-2xl glass p-5"
-        >
+          className="rounded-2xl glass p-5">
           <div className="flex items-start justify-between gap-3">
             <div>
               <div className="font-semibold text-sm">{r.name}</div>
@@ -61,40 +64,57 @@ export function ReviewList({ reviews, emptyMessage = "No reviews yet." }) {
             </div>
             <StarRow value={r.rating} />
           </div>
-          <p className="mt-3 text-sm leading-relaxed text-muted-foreground">{r.comment}</p>
+          <p className="mt-3 text-sm leading-relaxed text-muted-foreground">
+            {r.comment}
+          </p>
         </motion.div>
       ))}
     </div>
   );
 }
 
-export function ReviewForm({ productSlug }) {
+export function ReviewForm({ productSlug, onSuccess }) {
   const [name, setName] = useState("");
   const [city, setCity] = useState("");
   const [rating, setRating] = useState(5);
   const [comment, setComment] = useState("");
   const [submitting, setSubmitting] = useState(false);
 
-  const submit = (e) => {
+  const submit = async (e) => {
     e.preventDefault();
     if (!name.trim() || !comment.trim()) {
       toast.error("Please add your name and a comment.");
       return;
     }
     setSubmitting(true);
-    reviewActions.add({
-      productSlug,
-      name: name.trim(),
-      city: city.trim() || undefined,
-      rating,
-      comment: comment.trim(),
-    });
-    toast.success("Thanks! Your review is now live.");
-    setName("");
-    setCity("");
-    setComment("");
-    setRating(5);
-    setSubmitting(false);
+    try {
+      const res = await fetch("/api/reviews", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          productSlug,
+          name: name.trim(),
+          city: city.trim() || undefined,
+          rating,
+          comment: comment.trim(),
+        }),
+      });
+      if (res.ok) {
+        toast.success("Thank you! Your review has been published successfully.");
+        setName("");
+        setCity("");
+        setComment("");
+        setRating(5);
+        if (onSuccess) onSuccess();
+      } else {
+        const err = await res.json();
+        toast.error(err.error || "Failed to submit review.");
+      }
+    } catch {
+      toast.error("Failed to submit review.");
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   return (
@@ -124,12 +144,15 @@ export function ReviewForm({ productSlug }) {
               type="button"
               onClick={() => setRating(i)}
               className="transition-transform hover:scale-110 group overflow-hidden"
-              aria-label={`${i} stars`}
-            >
+              aria-label={`${i} stars`}>
               <div className="relative h-6 w-6 overflow-hidden">
                 <div className="flex flex-col transition-transform duration-500 ease-[cubic-bezier(0.22,1,0.36,1)] group-hover:-translate-y-6">
-                  <Star className={`h-6 w-6 shrink-0 ${i <= rating ? "fill-gold text-gold" : "text-muted-foreground/40"}`} />
-                  <Star className={`h-6 w-6 shrink-0 ${i <= rating ? "fill-gold text-gold" : "text-muted-foreground/40"}`} />
+                  <Star
+                    className={`h-6 w-6 shrink-0 ${i <= rating ? "fill-gold text-gold" : "text-muted-foreground/40"}`}
+                  />
+                  <Star
+                    className={`h-6 w-6 shrink-0 ${i <= rating ? "fill-gold text-gold" : "text-muted-foreground/40"}`}
+                  />
                 </div>
               </div>
             </button>

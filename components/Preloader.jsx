@@ -1,95 +1,165 @@
 "use client";
 
-import { motion, AnimatePresence } from "framer-motion";
 import { useEffect, useState } from "react";
+import { usePathname } from "next/navigation";
 
 export function Preloader() {
-  const [isLoading, setIsLoading] = useState(true);
-  const [count, setCount] = useState(0);
+  const [removed, setRemoved] = useState(false);
+  const pathname = usePathname();
+  const isAdmin = pathname?.startsWith("/admin");
 
   useEffect(() => {
-    // Hide scrollbar immediately
+    if (isAdmin) {
+      setRemoved(true);
+      return;
+    }
+
+    // Only show preloader once per session to make page navigation instant
+    if (typeof window !== "undefined" && sessionStorage.getItem("sst_preloader_shown")) {
+      setRemoved(true);
+      return;
+    }
+
     document.documentElement.style.overflow = "hidden";
     document.body.style.overflow = "hidden";
 
-    const interval = setInterval(() => {
-      setCount((prev) => {
-        if (prev >= 100) {
-          clearInterval(interval);
-          return 100;
-        }
-        const next = prev + Math.floor(Math.random() * 10) + 5;
-        return next > 100 ? 100 : next;
-      });
-    }, 40);
-
-    const timeout = setTimeout(() => {
-      setIsLoading(false);
-      // Wait for exit animation before restoring scroll
-      setTimeout(() => {
-        document.documentElement.style.overflow = "";
-        document.body.style.overflow = "";
-      }, 1200);
-    }, 1400);
+    const t = setTimeout(() => {
+      setRemoved(true);
+      if (typeof window !== "undefined") {
+        sessionStorage.setItem("sst_preloader_shown", "true");
+      }
+      document.documentElement.style.overflow = "";
+      document.body.style.overflow = "";
+    }, 1100); // Ultra fast loading
 
     return () => {
-      clearInterval(interval);
-      clearTimeout(timeout);
+      clearTimeout(t);
       document.documentElement.style.overflow = "";
       document.body.style.overflow = "";
     };
-  }, []);
+  }, [isAdmin]);
+
+  if (removed) return null;
 
   return (
-    <AnimatePresence mode="wait">
-      {isLoading && (
-        <motion.div
-          key="preloader"
-          initial={{ y: 0 }}
-          exit={{ 
-            y: "-100%",
-            transition: { 
-              duration: 1.1, 
-              ease: [0.83, 0, 0.17, 1],
-            }
-          }}
-          className="fixed inset-0 z-[100] flex flex-col items-center justify-center bg-black text-white"
-        >
-          {/* Main Logo Container */}
-          <div className="relative overflow-hidden px-10">
-            <motion.div
-              initial={{ y: 120 }}
-              animate={{ y: 0 }}
-              transition={{ duration: 1, ease: [0.22, 1, 0.36, 1], delay: 0.2 }}
-              className="flex flex-col items-center"
-            >
-              <div className="font-display text-5xl sm:text-6xl lg:text-8xl font-bold tracking-[0.1em] uppercase">
-                Sabir Shah
-              </div>
-              <div className="text-xs sm:text-sm tracking-[1.2em] text-primary mt-4 uppercase font-medium">
-                Traders
-              </div>
-            </motion.div>
+    <>
+      <div className="preloader-screen">
+        {/* Main Logo */}
+        <div className="preloader-logo-wrap">
+          <div className="preloader-logo-inner">
+            <div className="font-display preloader-title">Sabir Shah</div>
+            <div className="preloader-subtitle">Traders</div>
           </div>
+        </div>
 
-          {/* Bottom Counter */}
-          <div className="absolute bottom-12 right-12 flex items-baseline gap-3">
-             <motion.div 
-               initial={{ opacity: 0 }}
-               animate={{ opacity: 1 }}
-               className="text-white/20 text-[10px] tracking-[0.4em] uppercase"
-             >
-               Loading
-             </motion.div>
-            <span className="font-display text-6xl sm:text-8xl font-light tabular-nums leading-none">
-              {Math.min(count, 100)}
-            </span>
-          </div>
+        {/* Bottom Counter — fully CSS animated */}
+        <div className="preloader-counter">
+          <span className="preloader-counter-label">Loading</span>
+          <span className="font-display preloader-counter-number" />
+        </div>
 
-          {/* Noise / Texture */}
-          <div className="absolute inset-0 noise opacity-[0.03] pointer-events-none" />
-        </motion.div>
-      )}
-    </AnimatePresence>
+        {/* Noise Texture */}
+        <div className="absolute inset-0 noise opacity-[0.03] pointer-events-none" />
+      </div>
+
+      <style>{`
+        @property --num {
+          syntax: '<integer>';
+          initial-value: 0;
+          inherits: false;
+        }
+
+        .preloader-screen {
+          position: fixed;
+          inset: 0;
+          z-index: 200;
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          justify-content: center;
+          background: #000;
+          color: #fff;
+          animation: preloaderExit 1.1s cubic-bezier(0.83, 0, 0.17, 1) 1.5s forwards;
+        }
+
+        .preloader-logo-wrap {
+          overflow: hidden;
+          padding: 0 2.5rem;
+        }
+
+        .preloader-logo-inner {
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          animation: preloaderTextSlideUp 1s cubic-bezier(0.22, 1, 0.36, 1) 0.2s both;
+        }
+
+        .preloader-title {
+          font-size: clamp(3rem, 8vw, 6rem);
+          font-weight: 700;
+          letter-spacing: 0.1em;
+          text-transform: uppercase;
+        }
+
+        .preloader-subtitle {
+          font-size: clamp(0.7rem, 1.5vw, 0.875rem);
+          letter-spacing: 1.2em;
+          color: var(--primary, #1E7A46);
+          margin-top: 1rem;
+          text-transform: uppercase;
+          font-weight: 500;
+        }
+
+        .preloader-counter {
+          position: absolute;
+          bottom: 3rem;
+          right: 3rem;
+          display: flex;
+          align-items: baseline;
+          gap: 0.75rem;
+        }
+
+        .preloader-counter-label {
+          color: rgba(255,255,255,0.2);
+          font-size: 10px;
+          letter-spacing: 0.4em;
+          text-transform: uppercase;
+          animation: preloaderFadeIn 0.5s ease 0.3s both;
+        }
+
+        .preloader-counter-number {
+          font-size: clamp(3.5rem, 8vw, 5rem);
+          font-weight: 300;
+          font-variant-numeric: tabular-nums;
+          line-height: 1;
+          animation: preloaderCount 1.2s ease-out forwards;
+          counter-set: num var(--num);
+        }
+
+        .preloader-counter-number::after {
+          content: counter(num);
+        }
+
+        @keyframes preloaderCount {
+          from { --num: 0; }
+          to   { --num: 100; }
+        }
+
+        @keyframes preloaderTextSlideUp {
+          from { transform: translateY(120px); opacity: 0; }
+          to   { transform: translateY(0);    opacity: 1; }
+        }
+
+        @keyframes preloaderFadeIn {
+          from { opacity: 0; }
+          to   { opacity: 1; }
+        }
+
+        @keyframes preloaderExit {
+          from { transform: translateY(0); }
+          to   { transform: translateY(-100%); }
+        }
+      `}</style>
+    </>
   );
 }

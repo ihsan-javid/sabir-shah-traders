@@ -16,7 +16,9 @@ export function CategoryHero({ accent, eyebrow, title, description, icon }) {
           <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full glass text-xs">
             <span
               className={`h-6 w-6 rounded-full grid place-items-center ${
-                accent === "tech" ? "bg-tech text-tech-foreground" : "bg-health text-health-foreground"
+                accent === "tech" ? "bg-tech text-tech-foreground" :
+                accent === "gold" ? "bg-gold text-white" :
+                "bg-health text-health-foreground"
               }`}
             >
               {icon}
@@ -24,8 +26,10 @@ export function CategoryHero({ accent, eyebrow, title, description, icon }) {
             <span className="text-muted-foreground uppercase tracking-[0.25em]">{eyebrow}</span>
           </div>
           <h1
-            className={`mt-6 font-display text-5xl sm:text-6xl lg:text-7xl font-bold leading-[0.95] ${
-              accent === "tech" ? "text-gradient-tech" : "text-gradient-health"
+            className={`mt-6 font-display text-4xl sm:text-6xl lg:text-7xl font-bold leading-[0.95] ${
+              accent === "tech" ? "text-gradient-tech" :
+              accent === "gold" ? "text-gradient-gold" :
+              "text-gradient-health"
             }`}
           >
             {title}

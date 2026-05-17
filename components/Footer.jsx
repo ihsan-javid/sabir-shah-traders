@@ -3,12 +3,16 @@
 import Link from "next/link";
 import { motion } from "framer-motion";
 import { usePathname } from "next/navigation";
-import { MessageCircle, ArrowRight, Camera, Globe, X } from "lucide-react";
+import { Camera, Globe, X } from "lucide-react";
 import { TextButton } from "@/components/ui/text-button";
 import { Magnetic } from "@/components/ui/magnetic";
 
+import { useStoreSettings } from "@/components/StoreSettingsProvider";
+
 export function Footer() {
   const pathname = usePathname();
+  const { settings } = useStoreSettings();
+
   if (pathname.startsWith("/admin")) return null;
 
   const currentYear = new Date().getFullYear();
@@ -23,14 +27,12 @@ export function Footer() {
     company: [
       { name: "About Us", href: "/about" },
       { name: "Contact", href: "/contact" },
-      { name: "Reviews", href: "/#reviews" },
-      { name: "Wholesale", href: "/contact" },
-    ],
+        ],
     support: [
-      { name: "Shipping Policy", href: "/shipping" },
-      { name: "Refund Policy", href: "/refunds" },
-      { name: "Privacy Policy", href: "/privacy" },
-      { name: "Terms of Service", href: "/terms" },
+      { name: "Shipping Policy", href: "/policies/shipping" },
+      { name: "Refund Policy", href: "/policies/refund" },
+      { name: "Privacy Policy", href: "/policies/privacy" },
+      { name: "Terms of Service", href: "/policies/terms" },
     ],
   };
 
@@ -50,7 +52,7 @@ export function Footer() {
               <span className="text-primary">LET&apos;S TALK.</span>
             </motion.h2>
             <p className="mt-6 text-gray-400 text-lg max-w-md">
-              We&apos;re here to help you find the perfect supplement or the latest tech. Reach out anytime.
+              {settings?.aboutText || "We're here to help you find the perfect supplement or the latest tech. Reach out anytime."}
             </p>
           </div>
           <motion.div
@@ -61,7 +63,10 @@ export function Footer() {
           >
             <TextButton 
               text="WHATSAPP US"
-              onClick={() => window.open("https://wa.me/923000000000", "_blank")}
+              onClick={() => {
+                const num = (settings?.whatsappNumber || "923000000000").replace(/\D/g, "");
+                window.open(`https://wa.me/${num}`, "_blank");
+              }}
               className="text-lg px-12 py-6 h-auto"
             />
           </motion.div>
@@ -109,29 +114,21 @@ export function Footer() {
             <h4 className="text-sm font-bold uppercase tracking-widest text-primary mb-8">Social</h4>
             <div className="flex gap-6">
               {[
-                { Icon: Camera, href: "#" },
-                { Icon: X, href: "#" },
-                { Icon: Globe, href: "#" }
-              ].map(({ Icon, href }, i) => (
+                { Icon: Camera, href: settings?.socialLinks?.instagram || "#", label: "Instagram" },
+                { Icon: X, href: settings?.socialLinks?.twitter || "#", label: "Twitter" },
+                { Icon: Globe, href: settings?.socialLinks?.facebook || "#", label: "Facebook" }
+              ].map(({ Icon, href, label }, i) => (
                 <a 
                   key={i}
                   href={href} 
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  aria-label={label}
                   className="p-3 rounded-full border border-white/10 hover:border-primary hover:text-primary transition-all duration-300"
                 >
                   <Icon className="w-5 h-5" />
                 </a>
               ))}
-            </div>
-            <div className="mt-10">
-              <p className="text-xs text-gray-500 uppercase tracking-widest mb-4">Newsletter</p>
-              <div className="relative border-b border-white/20 pb-2 group">
-                <input 
-                  type="email" 
-                  placeholder="Enter your email" 
-                  className="bg-transparent border-none outline-none w-full text-sm placeholder:text-gray-600 focus:placeholder:text-gray-400 transition-all"
-                />
-                <ArrowRight className="absolute right-0 top-0 w-4 h-4 text-gray-600 group-focus-within:text-white transition-colors cursor-pointer" />
-              </div>
             </div>
           </div>
         </div>
@@ -140,17 +137,18 @@ export function Footer() {
         <div className="pt-10 border-t border-white/10 flex flex-col md:flex-row justify-between items-center gap-6">
           <div className="flex flex-col md:flex-row items-center gap-6">
             <h3 className="text-2xl font-display font-bold tracking-tighter uppercase">
-              sabir shah <span className="text-primary text-[10px] align-top ml-1">®</span>
+              {(settings?.storeName || "Sabir Shah Traders").toLowerCase()}{" "}
+              <span className="text-primary text-[10px] align-top ml-1">®</span>
             </h3>
             <p className="text-[10px] text-gray-600 uppercase tracking-[0.3em]">
-              Premium Nutrition & Electronics
+              {settings?.deliveryInfo || "Premium Nutrition & Electronics"}
             </p>
           </div>
           <div className="flex items-center gap-8 text-[10px] text-gray-500 uppercase tracking-widest">
-            <p>© {currentYear} ALL RIGHTS RESERVED</p>
+            <p>{settings?.footerCopyright || `© ${currentYear} ALL RIGHTS RESERVED`}</p>
             <div className="flex gap-4">
-              <Link href="/privacy" className="hover:text-white">Privacy</Link>
-              <Link href="/terms" className="hover:text-white">Terms</Link>
+              <Link href="/policies/privacy" className="hover:text-white">Privacy</Link>
+              <Link href="/policies/terms" className="hover:text-white">Terms</Link>
             </div>
           </div>
         </div>

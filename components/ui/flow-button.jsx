@@ -18,7 +18,7 @@ export function FlowButton({ text = "Modern Button", onClick, className, disable
       />
 
       {/* Text */}
-      <span className="relative z-[1] -translate-x-3 group-hover/flow:translate-x-3 transition-all duration-700 ease-[cubic-bezier(0.23,1,0.32,1)] will-change-transform">
+      <span className="relative z-[1] -translate-x-2 group-hover/flow:translate-x-2 transition-all duration-700 ease-[cubic-bezier(0.23,1,0.32,1)] will-change-transform whitespace-nowrap pointer-events-none">
         {text}
       </span>
 

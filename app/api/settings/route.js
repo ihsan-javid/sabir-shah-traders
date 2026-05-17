@@ -1,34 +1,73 @@
 import { NextResponse } from "next/server";
 import { connectDB } from "@/lib/mongodb";
 import Settings from "@/models/Settings";
+import { getAuthUser } from "@/lib/security";
+import { sanitizeSettingsForStorefront } from "@/lib/settings-runtime";
 
-export async function GET() {
-  try {
-    await connectDB();
-    let settings = await Settings.findOne();
-    if (!settings) {
-      settings = await Settings.create({});
-    }
-    return NextResponse.json({ settings });
-  } catch (error) {
-    console.error("Settings GET error:", error);
-    return NextResponse.json({ error: "Failed to fetch settings" }, { status: 500 });
+export const dynamic = "force-dynamic";
+
+async function getOrCreateSettings() {
+  await connectDB();
+  let doc = await Settings.findOne().lean();
+  if (!doc) {
+    doc = (await Settings.create({})).toObject();
   }
+  return doc;
+}
+
+export async function GET(req) {
+  try {
+    const settings = await getOrCreateSettings();
+    const user = await getAuthUser(req);
+    const payload = user ? settings : sanitizeSettingsForStorefront(settings);
+    return NextResponse.json(payload, {
+      headers: {
+        "Cache-Control": "private, no-store, max-age=0",
+      },
+    });
+  } catch (err) {
+    return NextResponse.json({ error: err.message }, { status: 500 });
+  }
+}
+
+async function requireAdmin(req) {
+  const user = await getAuthUser(req);
+  if (!user) return null;
+  return user;
+}
+
+async function updateSettings(req) {
+  const user = await requireAdmin(req);
+  if (!user) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  const body = await req.json();
+  const { _id, __v, createdAt, updatedAt, ...rest } = body || {};
+
+  const settings = await Settings.findOneAndUpdate(
+    {},
+    { $set: rest },
+    { new: true, upsert: true, runValidators: true },
+  ).lean();
+
+  return NextResponse.json(settings);
 }
 
 export async function POST(req) {
   try {
     await connectDB();
-    const body = await req.json();
-    let settings = await Settings.findOne();
-    if (!settings) {
-      settings = await Settings.create(body);
-    } else {
-      settings = await Settings.findOneAndUpdate({}, body, { new: true });
-    }
-    return NextResponse.json({ settings });
-  } catch (error) {
-    console.error("Settings POST error:", error);
-    return NextResponse.json({ error: "Failed to save settings" }, { status: 500 });
+    return await updateSettings(req);
+  } catch (err) {
+    return NextResponse.json({ error: err.message }, { status: 500 });
+  }
+}
+
+export async function PUT(req) {
+  try {
+    await connectDB();
+    return await updateSettings(req);
+  } catch (err) {
+    return NextResponse.json({ error: err.message }, { status: 500 });
   }
 }

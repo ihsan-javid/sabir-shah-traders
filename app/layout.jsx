@@ -5,6 +5,10 @@ import { AnnouncementBar } from "@/components/AnnouncementBar";
 import { WhatsAppFab } from "@/components/WhatsAppFab";
 import { SmoothScroll } from "@/components/SmoothScroll";
 import { Toaster } from "sonner";
+import { Preloader } from "@/components/Preloader";
+import { ThemeProvider } from "@/components/ThemeProvider";
+import { StoreSettingsProvider } from "@/components/StoreSettingsProvider";
+import { MaintenanceGuard } from "@/components/MaintenanceGuard";
 
 export const metadata = {
   title: "Sabir Shah Traders — Premium Electronics & Supplements",
@@ -19,23 +23,26 @@ export const metadata = {
   twitter: { card: "summary_large_image" },
 };
 
-import { ThemeProvider } from "@/components/ThemeProvider";
-
 export default function RootLayout({ children }) {
   return (
     <html lang="en" suppressHydrationWarning>
       <body suppressHydrationWarning>
-        <ThemeProvider attribute="class" defaultTheme="light">
-          <SmoothScroll />
-          <div className="fixed top-0 inset-x-0 z-[100]">
-            <AnnouncementBar />
-            <Header />
-          </div>
-          <main className="min-h-screen pt-24">{children}</main>
-          <Footer />
-          <WhatsAppFab />
-          <Toaster />
-        </ThemeProvider>
+        <StoreSettingsProvider>
+          <MaintenanceGuard>
+            <ThemeProvider defaultTheme="light">
+              <SmoothScroll />
+              <Preloader />
+              <div className="fixed top-0 inset-x-0 z-[100]">
+                <AnnouncementBar />
+                <Header />
+              </div>
+              <main className="min-h-screen ">{children}</main>
+              <Footer />
+              <WhatsAppFab />
+              <Toaster />
+            </ThemeProvider>
+          </MaintenanceGuard>
+        </StoreSettingsProvider>
       </body>
     </html>
   );
