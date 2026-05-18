@@ -52,7 +52,6 @@ export default function HomePage() {
 
   return (
     <>
-      
       <Hero />
       <Bestsellers />
       <Marquee />
@@ -204,7 +203,10 @@ function Hero() {
           <div className="hero-img relative">
             <div className="relative aspect-[4/3] lg:aspect-[5/5] w-full rounded-3xl overflow-hidden shadow-elevated animate-float">
               <img
-                src={settings?.heroImage || "https://res.cloudinary.com/dxhvfs4he/image/upload/v1779030421/sabir-shah/assets/new-hero-image.webp"}
+                src={
+                  settings?.heroImage ||
+                  "https://res.cloudinary.com/dxhvfs4he/image/upload/v1779030421/sabir-shah/assets/new-hero-image.webp"
+                }
                 alt="Premium nutrition"
                 className="absolute inset-0 h-full w-full object-cover"
               />
@@ -418,12 +420,36 @@ function SupplementsShowcase({ visible }) {
 
   if (!visible)
     return (
-      <div className="col-span-full py-20 flex flex-col items-center justify-center border-2 border-dashed border-border rounded-2xl glass">
-        <div className="h-16 w-16 rounded-full bg-muted grid place-items-center mb-4">
-          🚀
+      <div className="col-span-full">
+        <div className="relative overflow-hidden rounded-3xl border border-health/20 bg-gradient-to-br from-health/5 via-background to-health/10 p-12 lg:p-20 text-center group">
+          {/* Animated blobs */}
+          <div className="absolute -top-20 -left-20 h-64 w-64 rounded-full bg-health/10 blur-3xl animate-pulse pointer-events-none" />
+          <div
+            className="absolute -bottom-20 -right-20 h-64 w-64 rounded-full bg-health/15 blur-3xl animate-pulse pointer-events-none"
+            style={{ animationDelay: "1s" }}
+          />
+          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 h-96 w-96 rounded-full bg-health/5 blur-[80px] pointer-events-none" />
+          {/* Grid texture */}
+          <div className="absolute inset-0 grid-bg opacity-30 pointer-events-none" />
+          <div className="relative z-10">
+            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full border border-health/30 bg-health/10 text-health text-xs font-bold uppercase tracking-[0.3em] mb-8">
+              <span className="h-1.5 w-1.5 rounded-full bg-health animate-pulse" />
+              Restocking Soon
+            </div>
+            <h3 className="font-display text-5xl sm:text-6xl lg:text-7xl font-bold leading-[0.95] mb-6">
+              <span className="text-gradient-health">Coming</span>
+              <br />
+              <span className="text-foreground">Soon.</span>
+            </h3>
+            <p className="text-muted-foreground text-lg max-w-md mx-auto leading-relaxed">
+              We&apos;re curating the finest nutrition products. Our shelves
+              will be stocked with premium supplements very soon.
+            </p>
+            <div className="mt-10 flex flex-wrap items-center justify-center gap-4">
+              
+            </div>
+          </div>
         </div>
-        <h3 className="text-xl font-bold mb-2">Coming Soon</h3>
-        <p className="text-muted-foreground">Restocking soon.</p>
       </div>
     );
 
@@ -464,12 +490,36 @@ function ElectronicsShowcase({ visible }) {
 
   if (!visible)
     return (
-      <div className="col-span-full py-20 flex flex-col items-center justify-center border-2 border-dashed border-border rounded-2xl glass">
-        <div className="h-16 w-16 rounded-full bg-muted grid place-items-center mb-4">
-          🔌
+      <div className="col-span-full">
+        <div className="relative overflow-hidden rounded-3xl border border-tech/20 bg-gradient-to-br from-tech/5 via-background to-tech/10 p-12 lg:p-20 text-center group">
+          {/* Animated blobs */}
+          <div className="absolute -top-20 -left-20 h-64 w-64 rounded-full bg-tech/10 blur-3xl animate-pulse pointer-events-none" />
+          <div
+            className="absolute -bottom-20 -right-20 h-64 w-64 rounded-full bg-tech/15 blur-3xl animate-pulse pointer-events-none"
+            style={{ animationDelay: "1s" }}
+          />
+          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 h-96 w-96 rounded-full bg-tech/5 blur-[80px] pointer-events-none" />
+          {/* Grid texture */}
+          <div className="absolute inset-0 grid-bg opacity-30 pointer-events-none" />
+          <div className="relative z-10">
+            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full border border-tech/30 bg-tech/10 text-tech text-xs font-bold uppercase tracking-[0.3em] mb-8">
+              <span className="h-1.5 w-1.5 rounded-full bg-tech animate-pulse" />
+              Launching Soon
+            </div>
+            <h3 className="font-display text-5xl sm:text-6xl lg:text-7xl font-bold leading-[0.95] mb-6">
+              <span className="text-gradient-tech">Coming</span>
+              <br />
+              <span className="text-foreground">Soon.</span>
+            </h3>
+            <p className="text-muted-foreground text-lg max-w-md mx-auto leading-relaxed">
+              We&apos;re curating a premium line of electronics and gadgets. Our
+              tech showroom opens very soon.
+            </p>
+            <div className="mt-10 flex flex-wrap items-center justify-center gap-4">
+              
+            </div>
+          </div>
         </div>
-        <h3 className="text-xl font-bold mb-2">Coming Soon</h3>
-        <p className="text-muted-foreground">Tech showroom opening soon.</p>
       </div>
     );
 

@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { connectDB } from "@/lib/mongodb";
 import Order from "@/models/Order";
+import Coupon from "@/models/Coupon";
 import {
   validateAndSanitize,
   sanitizeInput,
@@ -132,14 +133,6 @@ export async function POST(req) {
     await connectDB();
 
     const body = await req.json();
-
-    console.log("Order creation request:", {
-      customer: body.customer?.name,
-      phone: body.customer?.phone,
-      items: body.items?.length,
-      paymentMethod: body.payment?.method,
-      total: body.pricing?.total,
-    });
 
     // Validate payment method
     const paymentValidation = validatePaymentMethod(body.payment?.method);
@@ -293,6 +286,18 @@ export async function POST(req) {
       userAgent: req.headers.get("user-agent") || "unknown",
       source: "website",
     });
+
+    // Track coupon usage
+    if (body.couponCode) {
+      try {
+        await Coupon.findOneAndUpdate(
+          { code: body.couponCode.toUpperCase() },
+          { $inc: { usageCount: 1, used: 1 } }
+        );
+      } catch (err) {
+        console.error("Failed to update coupon usage count:", err);
+      }
+    }
 
     // Return order details
     return NextResponse.json(

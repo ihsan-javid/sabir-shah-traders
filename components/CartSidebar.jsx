@@ -5,17 +5,52 @@ import { X, ShoppingBag, Plus, Minus, Trash2, ArrowRight } from "lucide-react";
 import { useCart } from "@/lib/cart";
 import { formatPKR } from "@/lib/products";
 import Link from "next/link";
-import { useEffect } from "react";
+import { useEffect, useRef, useState, useMemo } from "react";
 import { TextButton } from "@/components/ui/text-button";
 import { useRouter } from "next/navigation";
+import { useStoreSettings } from "@/components/StoreSettingsProvider";
+import { orderTotalsFromSettings } from "@/lib/payments";
 
 export function CartSidebar({ isOpen, onClose }) {
   const router = useRouter();
-  const { items, total, setQty, remove } = useCart();
-  const shipping =
-    total > 5000 ? 0
-    : items.length ? 250
-    : 0;
+  const { items, total, setQty, remove, clearBuyNow } = useCart();
+  const { settings } = useStoreSettings();
+  const scrollRef = useRef(null);
+  const [visibleCategorySlugs, setVisibleCategorySlugs] = useState(null); // null = loading
+
+  // Fetch visible categories to filter hidden-category products
+  useEffect(() => {
+    fetch("/api/categories")
+      .then((r) => r.json())
+      .then((cats) => {
+        if (Array.isArray(cats)) {
+          const slugs = cats.filter((c) => c.visible !== false).map((c) => c.slug);
+          setVisibleCategorySlugs(slugs);
+        } else {
+          setVisibleCategorySlugs([]);
+        }
+      })
+      .catch(() => setVisibleCategorySlugs([]));
+  }, []);
+
+  // Filter out products from hidden categories
+  const visibleItems = useMemo(() => {
+    if (visibleCategorySlugs === null) return items; // still loading, show all
+    return items.filter((it) => {
+      const cat = it.product?.category;
+      if (!cat) return true; // no category info, show it
+      return visibleCategorySlugs.includes(cat);
+    });
+  }, [items, visibleCategorySlugs]);
+
+  const visibleTotal = useMemo(
+    () => visibleItems.reduce((sum, it) => sum + it.product.price * it.qty, 0),
+    [visibleItems],
+  );
+
+  const pricing = useMemo(() => {
+    return orderTotalsFromSettings(visibleItems, settings, null, "COD");
+  }, [visibleItems, settings]);
 
   useEffect(() => {
     if (isOpen) document.body.style.overflow = "hidden";
@@ -24,6 +59,23 @@ export function CartSidebar({ isOpen, onClose }) {
       document.body.style.overflow = "";
     };
   }, [isOpen]);
+
+  // Prevent scroll propagation to background
+  useEffect(() => {
+    const el = scrollRef.current;
+    if (!el) return;
+    const handler = (e) => {
+      const { deltaY } = e;
+      const { scrollTop, scrollHeight, clientHeight } = el;
+      const isAtTop = scrollTop <= 0;
+      const isAtBottom = scrollTop + clientHeight >= scrollHeight - 1;
+      if ((isAtTop && deltaY < 0) || (isAtBottom && deltaY > 0)) {
+        e.preventDefault();
+      }
+    };
+    el.addEventListener("wheel", handler, { passive: false });
+    return () => el.removeEventListener("wheel", handler);
+  }, []);
 
   return (
     <AnimatePresence>
@@ -58,8 +110,12 @@ export function CartSidebar({ isOpen, onClose }) {
               </button>
             </div>
 
-            <div className="flex-1 overflow-y-auto p-5">
-              {items.length === 0 ?
+            <div 
+              ref={scrollRef}
+              onWheel={(e) => e.stopPropagation()}
+              className="flex-1 overflow-y-auto p-5 custom-scrollbar"
+              style={{ overscrollBehavior: "contain" }}>
+              {visibleItems.length === 0 ?
                 <div className="h-full flex flex-col items-center justify-center text-center text-muted-foreground">
                   <ShoppingBag className="h-12 w-12 mb-4 opacity-20" />
                   <p>Your cart is empty.</p>
@@ -71,7 +127,7 @@ export function CartSidebar({ isOpen, onClose }) {
                 </div>
               : <div className="space-y-4">
                   <AnimatePresence>
-                    {items.map((it) => (
+                    {visibleItems.map((it) => (
                       <motion.div
                         key={it.product._id}
                         layout
@@ -140,26 +196,38 @@ export function CartSidebar({ isOpen, onClose }) {
               }
             </div>
 
-            {items.length > 0 && (
+            {visibleItems.length > 0 && (
               <div className="p-5 border-t border-border bg-card">
                 <div className="space-y-2 text-sm mb-4">
                   <div className="flex justify-between text-muted-foreground">
                     <span>Subtotal</span>
-                    <span>{formatPKR(total)}</span>
+                    <span>{formatPKR(pricing.subtotal)}</span>
                   </div>
                   <div className="flex justify-between text-muted-foreground">
                     <span>Shipping</span>
-                    <span>{shipping === 0 ? "Free" : formatPKR(shipping)}</span>
+                    <span className={pricing.shippingFree ? "text-emerald-600 font-semibold" : ""}>
+                      {pricing.shippingLabel}
+                    </span>
                   </div>
+                  {settings?.tax?.enabled && (
+                    <div className="flex justify-between text-muted-foreground">
+                      <span>
+                        {pricing.taxLabel} ({settings.tax.rate}%)
+                        {pricing.taxInclusive ? " (inclusive)" : ""}
+                      </span>
+                      <span>{formatPKR(pricing.tax)}</span>
+                    </div>
+                  )}
                   <div className="flex justify-between font-bold text-base pt-2 border-t border-border">
                     <span>Total</span>
-                    <span>{formatPKR(total + shipping)}</span>
+                    <span>{formatPKR(pricing.total)}</span>
                   </div>
                 </div>
                 <TextButton
                   text="Checkout"
                   className="w-full"
                   onClick={() => {
+                    clearBuyNow(); // Clear stale Buy Now state before checkout
                     onClose();
                     router.push("/checkout");
                   }}
@@ -171,4 +239,5 @@ export function CartSidebar({ isOpen, onClose }) {
       )}
     </AnimatePresence>
   );
+
 }

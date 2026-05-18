@@ -11,24 +11,44 @@ import {
 
 const StoreSettingsContext = createContext(null);
 
+// Sensible fallback so pages never hang when the DB is unreachable
+const FALLBACK_SETTINGS = {
+  storeName: "Sabir Shah Traders",
+  deliveryFee: 400,
+  freeDeliveryThreshold: 0,
+  shipping: { freeShippingGlobal: true, expressEnabled: false, expressRate: 0 },
+  tax: { enabled: false, rate: 0, label: "GST", inclusive: false },
+  uiLabels: { addToCart: "Add to Cart", buyNow: "Buy Now", checkout: "Checkout", shopNow: "Shop Now" },
+  maintenanceMode: false,
+};
+
 export function StoreSettingsProvider({ children }) {
   const [settings, setSettings] = useState(null);
   const [error, setError] = useState(null);
 
   const refresh = useCallback(async () => {
     setError(null);
+    // Abort after 4 s so the page never hangs when the DB is unreachable
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), 4000);
     try {
-      const res = await fetch("/api/settings", { cache: "no-store" });
+      const res = await fetch("/api/settings", {
+        cache: "no-store",
+        signal: controller.signal,
+      });
+      clearTimeout(timer);
       const data = await res.json();
       if (!res.ok || data?.error) {
         setError(data?.error || "Failed to load settings");
-        setSettings(null);
+        setSettings((prev) => prev ?? FALLBACK_SETTINGS);
         return;
       }
       setSettings(data);
     } catch (e) {
+      clearTimeout(timer);
       setError(e.message || "Failed to load settings");
-      setSettings(null);
+      // Fall back to defaults — never leave settings null
+      setSettings((prev) => prev ?? FALLBACK_SETTINGS);
     }
   }, []);
 
@@ -37,7 +57,8 @@ export function StoreSettingsProvider({ children }) {
   }, [refresh]);
 
   useEffect(() => {
-    const id = setInterval(refresh, 60_000);
+    // Refresh every 30 seconds (faster than 60) for better real-time updates
+    const id = setInterval(refresh, 30_000);
     const onVis = () => {
       if (document.visibilityState === "visible") refresh();
     };
@@ -65,7 +86,7 @@ export function StoreSettingsProvider({ children }) {
 export function useStoreSettings() {
   const ctx = useContext(StoreSettingsContext);
   if (!ctx) {
-    return { settings: null, loading: true, error: null, refresh: () => {} };
+    return { settings: FALLBACK_SETTINGS, loading: false, error: null, refresh: () => {} };
   }
   return ctx;
 }

@@ -18,12 +18,21 @@ function SupplementsContent() {
   const [loading, setLoading] = useState(true);
   const [categoryHidden, setCategoryHidden] = useState(false);
 
-  const q = searchParams.get("q") ?? "";
-  const cat = searchParams.get("cat") ?? "";
-  const sort = searchParams.get("sort") ?? "popular";
-  const inStock = searchParams.get("inStock") === "true";
-  const min = Number(searchParams.get("minPrice")) || Number(searchParams.get("min")) || 0;
-  const max = Number(searchParams.get("maxPrice")) || Number(searchParams.get("max")) || 0;
+  const [q, setQ] = useState(searchParams.get("q") ?? "");
+  const [cat, setCat] = useState(searchParams.get("cat") ?? "");
+  const [sort, setSort] = useState(searchParams.get("sort") ?? "popular");
+  const [inStock, setInStock] = useState(searchParams.get("inStock") === "true");
+  const [min, setMin] = useState(Number(searchParams.get("minPrice")) || Number(searchParams.get("min")) || 0);
+  const [max, setMax] = useState(Number(searchParams.get("maxPrice")) || Number(searchParams.get("max")) || 0);
+
+  useEffect(() => {
+    setQ(searchParams.get("q") ?? "");
+    setCat(searchParams.get("cat") ?? "");
+    setSort(searchParams.get("sort") ?? "popular");
+    setInStock(searchParams.get("inStock") === "true");
+    setMin(Number(searchParams.get("minPrice")) || Number(searchParams.get("min")) || 0);
+    setMax(Number(searchParams.get("maxPrice")) || Number(searchParams.get("max")) || 0);
+  }, [searchParams]);
 
   useEffect(() => {
     setLoading(true);
@@ -111,8 +120,23 @@ function SupplementsContent() {
   const updateSearch = (patch) => {
     const params = new URLSearchParams(searchParams.toString());
     Object.entries(patch).forEach(([k, v]) => {
-      if (v === "" || v === false || v === 0) params.delete(k);
-      else params.set(k, String(v));
+      if (v === "" || v === false || v === 0) {
+        params.delete(k);
+        if (k === "q") setQ("");
+        if (k === "cat") setCat("");
+        if (k === "sort") setSort("popular");
+        if (k === "inStock") setInStock(false);
+        if (k === "minPrice" || k === "min") setMin(0);
+        if (k === "maxPrice" || k === "max") setMax(0);
+      } else {
+        params.set(k, String(v));
+        if (k === "q") setQ(String(v));
+        if (k === "cat") setCat(String(v));
+        if (k === "sort") setSort(String(v));
+        if (k === "inStock") setInStock(v === "true" || v === true);
+        if (k === "minPrice" || k === "min") setMin(Number(v) || 0);
+        if (k === "maxPrice" || k === "max") setMax(Number(v) || 0);
+      }
     });
     router.replace(`/supplements?${params.toString()}`, { scroll: false });
   };
@@ -148,7 +172,7 @@ function SupplementsContent() {
             <select
               value={sort}
               onChange={(e) => updateSearch({ sort: e.target.value })}
-              className="rounded-full glass px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-health/30">
+              className="rounded-full glass px-4 py-3 text-sm font-medium text-foreground focus:outline-none focus:ring-2 focus:ring-health/30 cursor-pointer relative z-20">
               <option value="popular">Most popular</option>
               <option value="newest">Newest</option>
               <option value="price-asc">Price: Low to High</option>

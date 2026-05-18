@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
 import { Trash2, Plus, Minus, ShoppingBag } from "lucide-react";
-import { useMemo } from "react";
+import { useMemo, useState, useEffect } from "react";
 import { useCart } from "@/lib/cart";
 import { formatPKR } from "@/lib/products";
 import { TextButton } from "@/components/ui/text-button";
@@ -13,21 +13,49 @@ import { orderTotalsFromSettings } from "@/lib/payments";
 export default function CartClient() {
   const { items, total, setQty, remove, clearBuyNow } = useCart();
   const { settings } = useStoreSettings();
+  const [visibleCategorySlugs, setVisibleCategorySlugs] = useState(null);
+
+  useEffect(() => {
+    fetch("/api/categories")
+      .then((r) => r.json())
+      .then((cats) => {
+        if (Array.isArray(cats)) {
+          setVisibleCategorySlugs(cats.filter((c) => c.visible !== false).map((c) => c.slug));
+        } else {
+          setVisibleCategorySlugs([]);
+        }
+      })
+      .catch(() => setVisibleCategorySlugs([]));
+  }, []);
+
+  const visibleItems = useMemo(() => {
+    if (visibleCategorySlugs === null) return items;
+    return items.filter((it) => {
+      const cat = it.product?.category;
+      if (!cat) return true;
+      return visibleCategorySlugs.includes(cat);
+    });
+  }, [items, visibleCategorySlugs]);
+
+  const visibleTotal = useMemo(
+    () => visibleItems.reduce((sum, it) => sum + it.product.price * it.qty, 0),
+    [visibleItems]
+  );
 
   const pricing = useMemo(() => {
-    const rows = items.map((it) => ({ product: it.product, qty: it.qty }));
+    const rows = visibleItems.map((it) => ({ product: it.product, qty: it.qty }));
     return orderTotalsFromSettings(rows, settings, null, "COD");
-  }, [items, settings]);
+  }, [visibleItems, settings]);
 
   return (
     <section className="pt-28 pb-24 min-h-screen">
       <div className="mx-auto max-w-6xl px-5 lg:px-8">
         <h1 className="font-display text-4xl sm:text-5xl font-bold">Your cart</h1>
         <p className="mt-2 text-sm text-muted-foreground">
-          {items.length === 0 ? "Your cart is empty." : `${items.length} item${items.length > 1 ? "s" : ""}`}
+          {visibleItems.length === 0 ? "Your cart is empty." : `${visibleItems.length} item${visibleItems.length > 1 ? "s" : ""}`}
         </p>
 
-        {items.length === 0 ? (
+        {visibleItems.length === 0 ? (
           <div className="mt-12 rounded-3xl glass p-16 text-center">
             <div className="mx-auto h-16 w-16 rounded-full glass grid place-items-center">
               <ShoppingBag className="h-7 w-7 text-muted-foreground" />
@@ -44,7 +72,7 @@ export default function CartClient() {
           <div className="mt-10 grid gap-8 lg:grid-cols-[1fr_360px]">
             <div className="space-y-3">
               <AnimatePresence>
-                {items.map((it) => (
+                {visibleItems.map((it) => (
                   <motion.div
                     key={it.product.id}
                     layout
@@ -116,8 +144,8 @@ export default function CartClient() {
               <div className="space-y-3 text-sm">
                 <div className="flex justify-between text-muted-foreground">
                   <span>Subtotal</span>
-                  <motion.span key={total} initial={{ opacity: 0, y: -4 }} animate={{ opacity: 1, y: 0 }}>
-                    {formatPKR(total)}
+                  <motion.span key={visibleTotal} initial={{ opacity: 0, y: -4 }} animate={{ opacity: 1, y: 0 }}>
+                    {formatPKR(visibleTotal)}
                   </motion.span>
                 </div>
                 <div className="flex justify-between text-muted-foreground">

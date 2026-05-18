@@ -28,6 +28,7 @@ import {
   Image as ImageIcon,
 } from "lucide-react";
 import { formatPKR } from "@/lib/payments";
+import ConfirmationModal from "@/components/admin/ConfirmationModal";
 import { toast } from "sonner";
 
 const STATUS_STYLES = {
@@ -92,6 +93,7 @@ export default function OrdersPage() {
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [bulkDeleteConfirmOpen, setBulkDeleteConfirmOpen] = useState(false);
   const [pagination, setPagination] = useState({
     page: 1,
     limit: 20,
@@ -111,9 +113,14 @@ export default function OrdersPage() {
     };
   }, [selectedOrder]);
 
-  // Bulk deletion handler
-  const handleBulkDelete = async () => {
-    if (!window.confirm(`Are you sure you want to delete the ${selectedOrderIds.length} selected orders?`)) return;
+  // Bulk deletion handlers
+  const triggerBulkDelete = () => {
+    if (selectedOrderIds.length === 0) return;
+    setBulkDeleteConfirmOpen(true);
+  };
+
+  const executeBulkDelete = async () => {
+    setBulkDeleteConfirmOpen(false);
     try {
       setLoading(true);
       await Promise.all(
@@ -360,7 +367,7 @@ export default function OrdersPage() {
                 Mark Delivered
               </button>
               <button
-                onClick={handleBulkDelete}
+                onClick={triggerBulkDelete}
                 className="px-3 py-1.5 bg-red-600 text-white rounded-lg text-xs font-semibold hover:bg-red-700 transition">
                 Delete Selected
               </button>
@@ -564,21 +571,21 @@ export default function OrdersPage() {
               <div className="pointer-events-auto w-screen max-w-2xl transform transition ease-in-out duration-500 sm:duration-700 translate-x-0">
                 <div
                   data-lenis-prevent
-                  className="flex h-full flex-col overflow-y-auto overscroll-y-contain bg-[#080B11] text-slate-100 border-l border-slate-800 shadow-[0_0_80px_rgba(0,0,0,0.85)] custom-scrollbar">
+                  className="flex h-full flex-col overflow-y-auto overscroll-y-contain bg-card text-foreground border-l border-border shadow-2xl custom-scrollbar">
                   {/* Header */}
-                  <div className="bg-gradient-to-br from-[#124d2c]/30 via-[#1E7A46]/10 to-transparent px-8 py-8 sm:px-10 border-b border-slate-800/80 relative overflow-hidden">
-                    <div className="absolute top-0 right-0 w-80 h-80 bg-green-500/10 rounded-full blur-[100px] pointer-events-none" />
+                  <div className="bg-muted/30 px-8 py-8 sm:px-10 border-b border-border relative overflow-hidden">
+                    <div className="absolute top-0 right-0 w-80 h-80 bg-primary/5 rounded-full blur-[100px] pointer-events-none" />
                     <div className="flex items-center justify-between relative z-10">
                       <div>
-                        <h2 className="text-2xl font-black text-white flex items-center gap-3 tracking-tight font-display">
+                        <h2 className="text-2xl font-black text-foreground flex items-center gap-3 tracking-tight font-display">
                           {selectedOrder.orderNumber}
                           {selectedOrder.verificationCode && (
-                            <span className="text-[10px] bg-amber-500/10 text-amber-400 font-mono px-3 py-1 rounded-full border border-amber-500/20 font-black tracking-widest uppercase">
+                            <span className="text-[10px] bg-amber-50 text-amber-600 font-mono px-3 py-1 rounded-full border border-amber-200 font-black tracking-widest uppercase">
                               Code: {selectedOrder.verificationCode}
                             </span>
                           )}
                         </h2>
-                        <p className="mt-1.5 text-xs text-slate-400 uppercase tracking-widest font-semibold">
+                        <p className="mt-1.5 text-xs text-muted-foreground uppercase tracking-widest font-semibold">
                           Placed on{" "}
                           {selectedOrder.createdAt ?
                             new Date(selectedOrder.createdAt).toLocaleString(
@@ -591,7 +598,7 @@ export default function OrdersPage() {
                       <div className="ml-3 flex h-7 items-center">
                         <button
                           onClick={() => setSelectedOrder(null)}
-                          className="rounded-full bg-slate-900 border border-slate-800 p-2 text-slate-400 hover:text-white hover:border-slate-700 hover:scale-105 active:scale-95 transition-all shadow-md">
+                          className="rounded-full bg-muted border border-border p-2 text-muted-foreground hover:text-foreground hover:border-primary/50 hover:scale-105 active:scale-95 transition-all shadow-sm">
                           <X className="h-4 w-4" />
                         </button>
                       </div>
@@ -600,18 +607,18 @@ export default function OrdersPage() {
                       <span
                         className={`px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest border ${
                           selectedOrder.status === "delivered"
-                            ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/20"
+                            ? "bg-emerald-50 text-emerald-600 border-emerald-200"
                             : selectedOrder.status === "cancelled"
-                            ? "bg-red-500/10 text-red-400 border-red-500/20"
-                            : "bg-amber-500/10 text-amber-400 border-amber-500/20"
+                            ? "bg-red-50 text-red-600 border-red-200"
+                            : "bg-amber-50 text-amber-600 border-amber-200"
                         }`}>
                         {selectedOrder.status}
                       </span>
                       <span
                         className={`px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest border ${
                           selectedOrder.payment?.method === "COD" && selectedOrder.payment?.status === "pending"
-                            ? "bg-blue-500/10 text-blue-400 border-blue-500/20"
-                            : "bg-green-500/10 text-green-400 border-green-500/20"
+                            ? "bg-blue-50 text-blue-600 border-blue-200"
+                            : "bg-emerald-50 text-emerald-600 border-emerald-200"
                         }`}>
                         Payment:{" "}
                         {selectedOrder.payment?.method === "COD" && selectedOrder.payment?.status === "pending" ?
@@ -628,18 +635,18 @@ export default function OrdersPage() {
                       <div className="space-y-6">
                         {/* Payment Verification Section */}
                         {selectedOrder.payment?.proof?.url && (
-                          <div className="bg-gradient-to-br from-amber-500/10 to-transparent border border-amber-500/20 rounded-2xl p-5 shadow-sm relative overflow-hidden group">
+                          <div className="bg-amber-50/50 border border-amber-200/50 rounded-2xl p-5 shadow-sm relative overflow-hidden group">
                             <div className="flex items-center gap-2 mb-3">
-                              <ImageIcon className="h-4.5 w-4.5 text-amber-400" />
-                              <h3 className="text-xs font-black text-amber-400 uppercase tracking-widest">
+                              <ImageIcon className="h-4.5 w-4.5 text-amber-500" />
+                              <h3 className="text-xs font-black text-amber-600 uppercase tracking-widest">
                                 Payment Screenshot
                               </h3>
                             </div>
-                            <div className="relative rounded-xl overflow-hidden border border-amber-500/30 group-hover:border-amber-400 transition-all duration-300">
+                            <div className="relative rounded-xl overflow-hidden border border-amber-200 group-hover:border-amber-400 transition-all duration-300">
                               <img
                                 src={selectedOrder.payment.proof.url}
                                 alt="Payment proof"
-                                className="w-full h-64 object-contain bg-slate-950 cursor-pointer hover:opacity-90 transition duration-300"
+                                className="w-full h-64 object-contain bg-muted cursor-pointer hover:opacity-90 transition duration-300"
                                 onClick={() =>
                                   window.open(
                                     selectedOrder.payment.proof.url,
@@ -648,7 +655,7 @@ export default function OrdersPage() {
                                 }
                               />
                             </div>
-                            <p className="text-[10px] text-amber-500/70 font-semibold tracking-wide mt-2.5 text-center">
+                            <p className="text-[10px] text-amber-600/70 font-semibold tracking-wide mt-2.5 text-center">
                               Click image to view full size
                             </p>
                             <div className="mt-4 flex gap-2">
@@ -676,33 +683,33 @@ export default function OrdersPage() {
                         )}
 
                         {/* Payment Method & Status */}
-                        <div className="bg-slate-900/40 border border-slate-800/80 rounded-2xl p-5 hover:border-green-500/30 hover:shadow-[0_0_20px_rgba(30,122,70,0.08)] transition-all duration-300 group">
-                          <h3 className="text-xs font-black text-slate-400 uppercase tracking-widest mb-4 flex items-center gap-2">
-                            <CreditCard className="h-4 w-4 text-[#1E7A46]" />
+                        <div className="bg-card border border-border rounded-2xl p-5 hover:border-primary/30 hover:shadow-sm transition-all duration-300 group">
+                          <h3 className="text-xs font-black text-muted-foreground uppercase tracking-widest mb-4 flex items-center gap-2">
+                            <CreditCard className="h-4 w-4 text-primary" />
                             Payment Details
                           </h3>
                           <div className="space-y-4">
                             <div className="flex justify-between items-center">
-                              <span className="text-xs text-slate-400 uppercase tracking-wider">Method</span>
-                              <span className="text-xs font-black bg-slate-800 text-white border border-slate-700 px-2.5 py-1 rounded uppercase font-mono">
+                              <span className="text-xs text-muted-foreground uppercase tracking-wider">Method</span>
+                              <span className="text-xs font-black bg-muted text-foreground border border-border px-2.5 py-1 rounded uppercase font-mono">
                                 {selectedOrder.payment?.method}
                               </span>
                             </div>
                             <div className="flex justify-between items-center">
-                              <span className="text-xs text-slate-400 uppercase tracking-wider">Status</span>
+                              <span className="text-xs text-muted-foreground uppercase tracking-wider">Status</span>
                               <span className={`text-xs font-black px-2.5 py-1 rounded border ${
                                 selectedOrder.payment?.status === "paid" 
-                                  ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/20" 
-                                  : "bg-amber-500/10 text-amber-400 border-amber-500/20"
+                                  ? "bg-emerald-50 text-emerald-600 border-emerald-200" 
+                                  : "bg-amber-50 text-amber-600 border-amber-200"
                               }`}>
                                 {selectedOrder.payment?.method === "COD" && selectedOrder.payment?.status === "pending" ?
                                   "Cash on Delivery" : (PAYMENT_STATUSES[selectedOrder.payment?.status]?.label || "Pending")
                                 }
                               </span>
                             </div>
-                            <div className="flex justify-between items-center border-t border-slate-800 pt-3">
-                              <span className="text-xs text-slate-400 uppercase tracking-wider">Total</span>
-                              <span className="text-base font-black text-amber-400 drop-shadow-[0_0_8px_rgba(245,158,11,0.25)] font-mono">
+                            <div className="flex justify-between items-center border-t border-border pt-3">
+                              <span className="text-xs text-muted-foreground uppercase tracking-wider">Total</span>
+                              <span className="text-base font-black text-primary font-mono">
                                 {formatPKR(selectedOrder.pricing?.total || 0)}
                               </span>
                             </div>
@@ -710,20 +717,20 @@ export default function OrdersPage() {
                         </div>
 
                         {/* Customer Info */}
-                        <div className="bg-slate-900/40 border border-slate-800/80 rounded-2xl p-5 hover:border-green-500/30 hover:shadow-[0_0_20px_rgba(30,122,70,0.08)] transition-all duration-300 group">
-                          <h3 className="text-xs font-black text-slate-400 uppercase tracking-widest mb-4 flex items-center gap-2">
-                            <User className="h-4 w-4 text-[#1E7A46]" />
+                        <div className="bg-card border border-border rounded-2xl p-5 hover:border-primary/30 hover:shadow-sm transition-all duration-300 group">
+                          <h3 className="text-xs font-black text-muted-foreground uppercase tracking-widest mb-4 flex items-center gap-2">
+                            <User className="h-4 w-4 text-primary" />
                             Customer
                           </h3>
                           <div className="space-y-2">
-                            <p className="font-bold text-sm text-white">
+                            <p className="font-bold text-sm text-foreground">
                               {selectedOrder.customer?.name}
                             </p>
-                            <p className="text-xs text-slate-400 font-mono">
+                            <p className="text-xs text-muted-foreground font-mono">
                               {selectedOrder.customer?.phone}
                             </p>
                             {selectedOrder.customer?.email && (
-                              <p className="text-xs text-slate-400 font-mono">
+                              <p className="text-xs text-muted-foreground font-mono">
                                 {selectedOrder.customer.email}
                               </p>
                             )}
@@ -731,13 +738,13 @@ export default function OrdersPage() {
                         </div>
 
                         {/* Shipping Address */}
-                        <div className="bg-slate-900/40 border border-slate-800/80 rounded-2xl p-5 hover:border-green-500/30 hover:shadow-[0_0_20px_rgba(30,122,70,0.08)] transition-all duration-300 group">
-                          <h3 className="text-xs font-black text-slate-400 uppercase tracking-widest mb-4 flex items-center gap-2">
-                            <MapPin className="h-4 w-4 text-[#1E7A46]" />
+                        <div className="bg-card border border-border rounded-2xl p-5 hover:border-primary/30 hover:shadow-sm transition-all duration-300 group">
+                          <h3 className="text-xs font-black text-muted-foreground uppercase tracking-widest mb-4 flex items-center gap-2">
+                            <MapPin className="h-4 w-4 text-primary" />
                             Shipping Address
                           </h3>
-                          <div className="text-xs text-slate-400 space-y-2">
-                            <p className="font-bold text-white text-sm">
+                          <div className="text-xs text-muted-foreground space-y-2">
+                            <p className="font-bold text-foreground text-sm">
                               {selectedOrder.shipping?.address}
                             </p>
                             <p className="uppercase tracking-wider font-semibold">
@@ -747,7 +754,7 @@ export default function OrdersPage() {
                               : ""}
                             </p>
                             {selectedOrder.shipping?.notes && (
-                              <p className="italic text-amber-500/70 mt-3 pt-3 border-t border-slate-800/60">
+                              <p className="italic text-muted-foreground mt-3 pt-3 border-t border-border">
                                 Note: {selectedOrder.shipping.notes}
                               </p>
                             )}
@@ -758,8 +765,8 @@ export default function OrdersPage() {
                       {/* Right Column */}
                       <div className="space-y-6">
                         {/* Order Status Actions */}
-                        <div className="bg-slate-900/40 border border-slate-800/80 rounded-2xl p-5 hover:border-green-500/30 hover:shadow-[0_0_20px_rgba(30,122,70,0.08)] transition-all duration-300 group">
-                          <h3 className="text-xs font-black text-slate-400 uppercase tracking-widest mb-4">
+                        <div className="bg-card border border-border rounded-2xl p-5 hover:border-primary/30 hover:shadow-sm transition-all duration-300 group">
+                          <h3 className="text-xs font-black text-muted-foreground uppercase tracking-widest mb-4">
                             Update Order Status
                           </h3>
                           <div className="flex flex-wrap gap-2">
@@ -772,8 +779,8 @@ export default function OrdersPage() {
                                 disabled={loading}
                                 className={`px-3 py-1.5 rounded-lg text-xs font-bold uppercase tracking-wider transition-all duration-200 active:scale-95 ${
                                   selectedOrder.status === s
-                                    ? "bg-[#1E7A46] text-white shadow-glow-health border border-[#1e7a46]/30"
-                                    : "bg-slate-850 hover:bg-slate-800 text-slate-300 border border-slate-800 hover:text-white"
+                                    ? "bg-primary text-primary-foreground shadow-sm border border-primary/30"
+                                    : "bg-muted hover:bg-muted/80 text-muted-foreground border border-border hover:text-foreground"
                                 }`}>
                                 {s}
                               </button>
@@ -782,32 +789,32 @@ export default function OrdersPage() {
                         </div>
 
                         {/* Order Items */}
-                        <div className="bg-slate-900/40 border border-slate-800/80 rounded-2xl p-5 hover:border-green-500/30 hover:shadow-[0_0_20px_rgba(30,122,70,0.08)] transition-all duration-300 group">
-                          <h3 className="text-xs font-black text-slate-400 uppercase tracking-widest mb-4 flex items-center gap-2">
-                            <Package className="h-4 w-4 text-[#1E7A46]" />
+                        <div className="bg-card border border-border rounded-2xl p-5 hover:border-primary/30 hover:shadow-sm transition-all duration-300 group">
+                          <h3 className="text-xs font-black text-muted-foreground uppercase tracking-widest mb-4 flex items-center gap-2">
+                            <Package className="h-4 w-4 text-primary" />
                             Items ({selectedOrder.items?.length || 0})
                           </h3>
                           <div className="space-y-3 max-h-64 overflow-y-auto custom-scrollbar pr-1">
                             {selectedOrder.items?.map((item, i) => (
                               <div
                                 key={i}
-                                className="flex items-center gap-3 p-3 bg-slate-950/80 rounded-xl border border-slate-800/80 hover:border-slate-700 transition-colors">
+                                className="flex items-center gap-3 p-3 bg-muted/50 rounded-xl border border-border hover:border-primary/20 transition-colors">
                                 {item.image && (
                                   <img
                                     src={item.image}
                                     alt={item.name}
-                                    className="h-12 w-12 rounded-lg object-cover"
+                                    className="h-12 w-12 rounded-lg object-cover bg-card"
                                   />
                                 )}
                                 <div className="flex-1 min-w-0">
-                                  <p className="text-xs font-bold text-white truncate">
+                                  <p className="text-xs font-bold text-foreground truncate">
                                     {item.name}
                                   </p>
-                                  <p className="text-[10px] text-slate-500 font-mono mt-0.5">
+                                  <p className="text-[10px] text-muted-foreground font-mono mt-0.5">
                                     Qty: {item.qty}
                                   </p>
                                 </div>
-                                <p className="text-xs font-black text-[#1E7A46]">
+                                <p className="text-xs font-black text-primary">
                                   {formatPKR(item.price * item.qty)}
                                 </p>
                               </div>
@@ -816,22 +823,22 @@ export default function OrdersPage() {
                         </div>
 
                         {/* Pricing Breakdown */}
-                        <div className="bg-slate-900/40 border border-slate-800/80 rounded-2xl p-5 hover:border-green-500/30 hover:shadow-[0_0_20px_rgba(30,122,70,0.08)] transition-all duration-300 group">
-                          <h3 className="text-xs font-black text-slate-400 uppercase tracking-widest mb-4">
+                        <div className="bg-card border border-border rounded-2xl p-5 hover:border-primary/30 hover:shadow-sm transition-all duration-300 group">
+                          <h3 className="text-xs font-black text-muted-foreground uppercase tracking-widest mb-4">
                             Order Summary
                           </h3>
                           <div className="space-y-3 text-xs">
                             <div className="flex justify-between">
-                              <span className="text-slate-400">Subtotal</span>
-                              <span className="font-bold text-white font-mono">
+                              <span className="text-muted-foreground">Subtotal</span>
+                              <span className="font-bold text-foreground font-mono">
                                 {formatPKR(
                                   selectedOrder.pricing?.subtotal || 0,
                                 )}
                               </span>
                             </div>
                             <div className="flex justify-between">
-                              <span className="text-slate-400">Shipping</span>
-                              <span className="font-bold text-white font-mono">
+                              <span className="text-muted-foreground">Shipping</span>
+                              <span className="font-bold text-foreground font-mono">
                                 {selectedOrder.pricing?.shipping === 0 ?
                                   "Free"
                                 : formatPKR(
@@ -841,18 +848,18 @@ export default function OrdersPage() {
                               </span>
                             </div>
                             {selectedOrder.pricing?.discount > 0 && (
-                              <div className="flex justify-between text-emerald-400">
+                              <div className="flex justify-between text-emerald-600">
                                 <span>Discount</span>
                                 <span className="font-bold font-mono">
                                   -{formatPKR(selectedOrder.pricing.discount)}
                                 </span>
                               </div>
                             )}
-                            <div className="border-t border-slate-800 pt-3 flex justify-between items-center">
-                              <span className="font-black text-slate-300 uppercase tracking-wider">
+                            <div className="border-t border-border pt-3 flex justify-between items-center">
+                              <span className="font-black text-foreground uppercase tracking-wider">
                                 Total
                               </span>
-                              <span className="text-lg font-black text-amber-400 font-mono drop-shadow-[0_0_8px_rgba(245,158,11,0.25)]">
+                              <span className="text-lg font-black text-primary font-mono">
                                 {formatPKR(selectedOrder.pricing?.total || 0)}
                               </span>
                             </div>
@@ -863,15 +870,15 @@ export default function OrdersPage() {
                   </div>
 
                   {/* Footer Actions */}
-                  <div className="border-t border-slate-800/80 bg-slate-950 px-8 py-5 sm:px-10 flex justify-end gap-3">
+                  <div className="border-t border-border bg-muted/20 px-8 py-5 sm:px-10 flex justify-end gap-3">
                     <button
                       onClick={() => setSelectedOrder(null)}
-                      className="px-5 py-2.5 border border-slate-800 rounded-xl text-xs font-black uppercase tracking-widest text-slate-300 bg-slate-900/50 hover:bg-slate-850 hover:text-white transition-all active:scale-[0.98]">
+                      className="px-5 py-2.5 border border-border rounded-xl text-xs font-black uppercase tracking-widest text-muted-foreground bg-card hover:bg-muted hover:text-foreground transition-all active:scale-[0.98]">
                       Close
                     </button>
                     <button
                       onClick={() => window.print()}
-                      className="px-5 py-2.5 border border-slate-800 rounded-xl text-xs font-black uppercase tracking-widest text-slate-300 bg-slate-900/50 hover:bg-slate-850 hover:text-white transition-all flex items-center gap-2 active:scale-[0.98]">
+                      className="px-5 py-2.5 border border-primary/20 rounded-xl text-xs font-black uppercase tracking-widest text-primary bg-primary/5 hover:bg-primary/10 hover:border-primary/40 transition-all flex items-center gap-2 active:scale-[0.98]">
                       <Download className="h-4 w-4" />
                       Print Order
                     </button>
@@ -882,6 +889,14 @@ export default function OrdersPage() {
           </div>
         </div>
       )}
+
+      <ConfirmationModal
+        isOpen={bulkDeleteConfirmOpen}
+        onClose={() => setBulkDeleteConfirmOpen(false)}
+        onConfirm={executeBulkDelete}
+        title="Delete Orders"
+        message={`Are you sure you want to delete the ${selectedOrderIds.length} selected orders? This action cannot be undone.`}
+      />
     </div>
   );
 }

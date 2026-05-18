@@ -91,9 +91,21 @@ export default function CheckoutClient() {
   const [couponCode, setCouponCode] = useState("");
   const [appliedCoupon, setAppliedCoupon] = useState(null);
   const [couponLoading, setCouponLoading] = useState(false);
-  const { settings } = useStoreSettings();
-
+  const { settings, loading: settingsLoading } = useStoreSettings();
   const scrollRef = useRef(null);
+
+  // All useState hooks must be declared before any conditional return
+  const [done, setDone] = useState(false);
+  const [orderNumber, setOrderNumber] = useState(null);
+  const [verificationCode, setVerificationCode] = useState(null);
+  const [paymentMethod, setPaymentMethod] = useState("COD");
+  const [timedOut, setTimedOut] = useState(false); // Global fallback timeout
+
+  // Global safety net: if it takes more than 8 seconds to load, stop spinning
+  useEffect(() => {
+    const timer = setTimeout(() => setTimedOut(true), 8000);
+    return () => clearTimeout(timer);
+  }, []);
 
   useEffect(() => {
     const el = scrollRef.current;
@@ -103,20 +115,46 @@ export default function CheckoutClient() {
       const { scrollTop, scrollHeight, clientHeight } = el;
       const isAtTop = scrollTop <= 0;
       const isAtBottom = scrollTop + clientHeight >= scrollHeight - 1;
-
       if ((isAtTop && deltaY < 0) || (isAtBottom && deltaY > 0)) {
         e.preventDefault();
       }
     };
     el.addEventListener("wheel", handler, { passive: false });
-
     return () => el.removeEventListener("wheel", handler);
   }, []);
 
-  const [done, setDone] = useState(false);
-  const [orderNumber, setOrderNumber] = useState(null);
-  const [verificationCode, setVerificationCode] = useState(null);
-  const [paymentMethod, setPaymentMethod] = useState("COD");
+  // Global timeout fallback UI
+  if (timedOut && settingsLoading) {
+    return (
+      <section className="pt-28 pb-24 min-h-screen flex items-center justify-center">
+        <div className="text-center p-6 bg-red-50 border border-red-200 rounded-2xl max-w-md">
+          <AlertCircle className="h-10 w-10 text-red-500 mx-auto mb-4" />
+          <h2 className="text-xl font-bold text-red-700 mb-2">Something went wrong</h2>
+          <p className="text-sm text-red-600 mb-4">
+            The checkout page took too long to load. Please refresh the page to try again.
+          </p>
+          <button 
+            onClick={() => window.location.reload()} 
+            className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 font-medium"
+          >
+            Refresh Page
+          </button>
+        </div>
+      </section>
+    );
+  }
+
+  // Show spinner while settings are loading
+  if (settingsLoading) {
+    return (
+      <section className="pt-28 pb-24 min-h-screen flex items-center justify-center">
+        <div className="flex flex-col items-center gap-4 text-muted-foreground">
+          <Loader2 className="h-10 w-10 animate-spin text-primary" />
+          <p className="text-sm font-medium">Loading checkout…</p>
+        </div>
+      </section>
+    );
+  }
 
   const hasItems = buyNowItem || items.length > 0;
 

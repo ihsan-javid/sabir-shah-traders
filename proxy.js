@@ -20,7 +20,7 @@ const securityHeaders = {
   "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
 };
 
-// In-memory rate limiting store for middleware
+// In-memory rate limiting store for proxy middleware
 const rateLimitStore = new Map();
 
 /**
@@ -122,7 +122,7 @@ async function verifyJWT(token, secret) {
   }
 }
 
-export async function middleware(req) {
+export async function proxy(req) {
   const { pathname } = req.nextUrl;
   const method = req.method;
 
@@ -200,7 +200,7 @@ export async function middleware(req) {
   // Verify token cryptographically using Web Crypto
   let user = null;
   if (token) {
-    user = await verifyJWT(token, process.env.JWT_SECRET || "dfsrtretf242ssdft35r4567");
+    user = await verifyJWT(token, process.env.JWT_SECRET);
     
     // Token invalid and no refresh token
     if (!user && !refreshToken) {

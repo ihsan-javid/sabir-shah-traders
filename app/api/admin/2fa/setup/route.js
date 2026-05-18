@@ -50,12 +50,12 @@ export async function POST(request) {
         );
       }
 
-      // Verify TOTP token
+      // Verify TOTP token with wider clock drift tolerance (10 minutes window)
       const verified = speakeasy.totp.verify({
         secret,
         encoding: "base32",
         token: code.replace(/\s/g, ""),
-        window: 4, // 4 step window allowance (2 minutes)
+        window: 20, // 20 step window allowance (10 minutes)
       });
 
       if (!verified) {

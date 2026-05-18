@@ -14,23 +14,16 @@ export function Preloader() {
       return;
     }
 
-    // Only show preloader once per session to make page navigation instant
-    if (typeof window !== "undefined" && sessionStorage.getItem("sst_preloader_shown")) {
-      setRemoved(true);
-      return;
-    }
-
     document.documentElement.style.overflow = "hidden";
     document.body.style.overflow = "hidden";
 
+    // Total duration: 0.3s fade-in + 1.2s count + 0.5s hold + 0.6s exit = ~2.6s
+    // We remove the DOM element after the CSS exit animation completes
     const t = setTimeout(() => {
       setRemoved(true);
-      if (typeof window !== "undefined") {
-        sessionStorage.setItem("sst_preloader_shown", "true");
-      }
       document.documentElement.style.overflow = "";
       document.body.style.overflow = "";
-    }, 1100); // Ultra fast loading
+    }, 2700);
 
     return () => {
       clearTimeout(t);
@@ -79,7 +72,7 @@ export function Preloader() {
           justify-content: center;
           background: #000;
           color: #fff;
-          animation: preloaderExit 1.1s cubic-bezier(0.83, 0, 0.17, 1) 1.5s forwards;
+          animation: preloaderExit 0.8s cubic-bezier(0.83, 0, 0.17, 1) 1.9s forwards;
         }
 
         .preloader-logo-wrap {
@@ -132,7 +125,7 @@ export function Preloader() {
           font-weight: 300;
           font-variant-numeric: tabular-nums;
           line-height: 1;
-          animation: preloaderCount 1.2s ease-out forwards;
+          animation: preloaderCount 1.5s ease-out 0.3s forwards;
           counter-set: num var(--num);
         }
 

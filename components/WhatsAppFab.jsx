@@ -11,7 +11,7 @@ export function WhatsAppFab() {
   const { settings } = useStoreSettings();
   if (pathname.startsWith("/admin")) return null;
 
-  const num = (settings?.whatsappNumber || "923000000000").replace(/\D/g, "");
+  const num = settings?.whatsappNumber ? settings.whatsappNumber.replace(/\D/g, "") : "923000000000";
   const store = settings?.storeName || "Sabir Shah Traders";
   const href = `https://wa.me/${num}?text=${encodeURIComponent(`Hi ${store}, I want to order`)}`;
 

@@ -14,6 +14,7 @@ import {
   Globe,
 } from "lucide-react";
 import { toast } from "sonner";
+import ConfirmationModal from "@/components/admin/ConfirmationModal";
 
 import {
   AdminButton,
@@ -118,6 +119,7 @@ export default function SettingsPage() {
   const [verificationCode, setVerificationCode] = useState("");
   const [verifying2FA, setVerifying2FA] = useState(false);
   const [generating2FA, setGenerating2FA] = useState(false);
+  const [disable2FAConfirm, setDisable2FAConfirm] = useState(false);
 
   const handleToggle2FA = async (enable) => {
     if (enable) {
@@ -143,24 +145,26 @@ export default function SettingsPage() {
         setGenerating2FA(false);
       }
     } else {
-      if (!confirm("Are you sure you want to disable Two-Factor Authentication? Your account will be less secure.")) {
-        return;
+      setDisable2FAConfirm(true);
+    }
+  };
+
+  const executeDisable2FA = async () => {
+    setDisable2FAConfirm(false);
+    try {
+      const res = await fetch("/api/admin/2fa/disable", {
+        method: "POST",
+        credentials: "include",
+      });
+      const data = await res.json();
+      if (res.ok) {
+        update("security.twoFactorAuth", false);
+        toast.success("Two-Factor Authentication disabled");
+      } else {
+        toast.error(data.error || "Failed to disable 2FA");
       }
-      try {
-        const res = await fetch("/api/admin/2fa/disable", {
-          method: "POST",
-          credentials: "include",
-        });
-        const data = await res.json();
-        if (res.ok) {
-          update("security.twoFactorAuth", false);
-          toast.success("Two-Factor Authentication disabled");
-        } else {
-          toast.error(data.error || "Failed to disable 2FA");
-        }
-      } catch (err) {
-        toast.error("Failed to connect to security service");
-      }
+    } catch (err) {
+      toast.error("Failed to connect to security service");
     }
   };
 
@@ -203,6 +207,7 @@ export default function SettingsPage() {
     maintenanceMode: false,
     storeName: "Sabir Shah Traders",
     contactPhone: "",
+    whatsappNumber: "",
     contactEmail: "",
     contactAddress: "",
     deliveryFee: 0,
@@ -231,6 +236,10 @@ export default function SettingsPage() {
       sessionTimeout: 60,
       loginAttemptLimit: 5,
     },
+    smtpHost: "",
+    smtpPort: 587,
+    smtpUser: "",
+    smtpPass: "",
   });
 
   useEffect(() => {
@@ -262,12 +271,14 @@ export default function SettingsPage() {
         body: JSON.stringify(settings),
       });
 
+      const data = await res.json();
+
       if (res.ok) {
         setSaved(true);
         toast.success("System-wide settings synchronized!");
         setTimeout(() => setSaved(false), 2000);
       } else {
-        toast.error("Failed to sync settings");
+        toast.error(data.error || "Failed to sync settings");
       }
     } catch (err) {
       toast.error("An error occurred during synchronization");
@@ -365,11 +376,15 @@ export default function SettingsPage() {
                     />
                   </div>
                 </SettingRow>
-                <SettingRow label="Support Phone">
+                <SettingRow label="WhatsApp / Phone Number">
                   <div className="w-64">
                     <Input
-                      value={settings.contactPhone}
-                      onChange={(v) => update("contactPhone", v)}
+                      value={settings.whatsappNumber}
+                      onChange={(v) => {
+                        update("whatsappNumber", v);
+                        update("contactPhone", v);
+                      }}
+                      placeholder="e.g. 923000000000"
                     />
                   </div>
                 </SettingRow>
@@ -378,6 +393,62 @@ export default function SettingsPage() {
                     <Input
                       value={settings.contactEmail}
                       onChange={(v) => update("contactEmail", v)}
+                    />
+                  </div>
+                </SettingRow>
+              </Section>
+
+              <Section
+                title="Email SMTP Mailer Configuration"
+                description="Dynamic server details for dispatching contact emails"
+              >
+                <SettingRow
+                  label="SMTP Server Host"
+                  description="e.g. smtp.gmail.com"
+                >
+                  <div className="w-64">
+                    <Input
+                      value={settings.smtpHost}
+                      onChange={(v) => update("smtpHost", v)}
+                      placeholder="smtp.gmail.com"
+                    />
+                  </div>
+                </SettingRow>
+                <SettingRow
+                  label="SMTP Port"
+                  description="Standard 587 (TLS) or 465 (SSL)"
+                >
+                  <div className="w-32">
+                    <Input
+                      type="number"
+                      value={settings.smtpPort}
+                      onChange={(v) => update("smtpPort", Number(v))}
+                      placeholder="587"
+                    />
+                  </div>
+                </SettingRow>
+                <SettingRow
+                  label="SMTP Account Username"
+                  description="e.g. user@gmail.com"
+                >
+                  <div className="w-64">
+                    <Input
+                      value={settings.smtpUser}
+                      onChange={(v) => update("smtpUser", v)}
+                      placeholder="business@gmail.com"
+                    />
+                  </div>
+                </SettingRow>
+                <SettingRow
+                  label="SMTP Password / App Password"
+                  description="Secure app-specific passcode"
+                >
+                  <div className="w-64">
+                    <Input
+                      type="password"
+                      value={settings.smtpPass}
+                      onChange={(v) => update("smtpPass", v)}
+                      placeholder="••••••••••••••••"
                     />
                   </div>
                 </SettingRow>
@@ -624,6 +695,14 @@ export default function SettingsPage() {
           </div>
         </div>
       </AdminModal>
+
+      <ConfirmationModal
+        isOpen={disable2FAConfirm}
+        onClose={() => setDisable2FAConfirm(false)}
+        onConfirm={executeDisable2FA}
+        title="Disable Two-Factor Authentication"
+        message="Are you sure you want to disable Two-Factor Authentication? Your account will be significantly less secure against unauthorized access."
+      />
     </div>
   );
 }

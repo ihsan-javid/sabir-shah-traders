@@ -4,6 +4,7 @@
 // Use these everywhere in the admin panel. Zero one-off styles for components.
 // =============================================================================
 
+import { useEffect, useRef } from "react";
 import {
   Loader2,
   AlertCircle,
@@ -392,9 +393,55 @@ export function AdminToggleTabs({ tabs, active, onChange }) {
 
 // ── Modal ─────────────────────────────────────────────────────────────────────
 export function AdminModal({ isOpen, onClose, title, description, children, className = "" }) {
+  const modalRef = useRef(null);
+
+  useEffect(() => {
+    if (isOpen) {
+      document.body.style.overflow = "hidden";
+    } else {
+      document.body.style.overflow = "";
+    }
+    return () => {
+      document.body.style.overflow = "";
+    };
+  }, [isOpen]);
+
+  useEffect(() => {
+    if (!isOpen) return;
+    const el = modalRef.current;
+    if (!el) return;
+
+    const handleWheel = (e) => {
+      const scrollable = el.querySelector(".overflow-y-auto");
+      if (!scrollable) return;
+
+      const { deltaY } = e;
+      const { scrollTop, scrollHeight, clientHeight } = scrollable;
+
+      const isAtTop = scrollTop <= 0;
+      const isAtBottom = scrollTop + clientHeight >= scrollHeight - 1;
+
+      if ((isAtTop && deltaY < 0) || (isAtBottom && deltaY > 0)) {
+        e.preventDefault();
+      }
+      e.stopPropagation();
+    };
+
+    const handleTouchMove = (e) => {
+      e.stopPropagation();
+    };
+
+    el.addEventListener("wheel", handleWheel, { passive: false });
+    el.addEventListener("touchmove", handleTouchMove, { passive: false });
+    return () => {
+      el.removeEventListener("wheel", handleWheel);
+      el.removeEventListener("touchmove", handleTouchMove);
+    };
+  }, [isOpen]);
+
   if (!isOpen) return null;
   return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+    <div ref={modalRef} className="fixed inset-0 z-[100] flex items-center justify-center p-4">
       <div
         onClick={onClose}
         className="absolute inset-0 bg-black/60 backdrop-blur-sm transition-opacity"

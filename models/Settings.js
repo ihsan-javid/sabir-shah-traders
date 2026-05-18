@@ -44,16 +44,27 @@ const SettingsSchema = new mongoose.Schema(
       instagram: { type: String, default: "#" },
       twitter: { type: String, default: "#" },
       facebook: { type: String, default: "#" },
+      whatsapp: { type: String, default: "" },
     },
+
+    smtpHost: { type: String, default: "" },
+    smtpPort: { type: Number, default: 587 },
+    smtpUser: { type: String, default: "" },
+    smtpPass: { type: String, default: "" },
 
     deliveryFee: { type: Number, default: 0 },
     freeDeliveryThreshold: { type: Number, default: 0 },
 
     // Detailed Configuration
     shipping: {
+      freeShipping: { type: Boolean, default: false }, // Global free shipping
+      shippingCost: { type: Number, default: 250 }, // Flat shipping rate
+      freeShippingThreshold: { type: Number, default: 5000 }, // Min order for free shipping
       freeShippingGlobal: { type: Boolean, default: false },
       expressEnabled: { type: Boolean, default: false },
       expressRate: { type: Number, default: 0 },
+      codEnabled: { type: Boolean, default: true },
+      codFee: { type: Number, default: 0 },
     },
 
     tax: {
@@ -144,6 +155,10 @@ const SettingsSchema = new mongoose.Schema(
   },
   { timestamps: true },
 );
+
+if (mongoose.models.Settings) {
+  delete mongoose.models.Settings;
+}
 
 export default mongoose.models.Settings ||
   mongoose.model("Settings", SettingsSchema);

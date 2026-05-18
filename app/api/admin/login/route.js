@@ -100,7 +100,7 @@ export async function POST(request) {
         secret: admin.twoFactorSecret,
         encoding: "base32",
         token: String(twoFactorCode).replace(/\s/g, ""),
-        window: 4, // 4 step window allowance (2 minutes) for clock drift tolerance
+        window: 20, // 20 step window allowance (10 minutes) for clock drift tolerance
       });
 
       if (!verified) {

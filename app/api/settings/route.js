@@ -15,6 +15,18 @@ async function getOrCreateSettings() {
   return doc;
 }
 
+const FALLBACK_SETTINGS = {
+  storeName: "Sabir Shah Traders",
+  deliveryFee: 400,
+  freeDeliveryThreshold: 0,
+  shipping: { freeShippingGlobal: true, expressEnabled: false, expressRate: 0 },
+  tax: { enabled: false, rate: 0, label: "GST", inclusive: false },
+  uiLabels: { addToCart: "Add to Cart", buyNow: "Buy Now", checkout: "Checkout", shopNow: "Shop Now" },
+  maintenanceMode: false,
+  announcementBar: "",
+  showAnnouncement: false,
+};
+
 export async function GET(req) {
   try {
     const settings = await getOrCreateSettings();
@@ -26,7 +38,11 @@ export async function GET(req) {
       },
     });
   } catch (err) {
-    return NextResponse.json({ error: err.message }, { status: 500 });
+    // DB unreachable — return safe defaults so the storefront still loads
+    console.error("[settings GET] DB error, returning fallback:", err.message);
+    return NextResponse.json(FALLBACK_SETTINGS, {
+      headers: { "Cache-Control": "no-store" },
+    });
   }
 }
 

@@ -22,6 +22,7 @@ import { formatPKR } from "@/lib/products";
 import { toast } from "sonner";
 import { exportToCSV } from "@/lib/utils";
 import { motion, AnimatePresence } from "framer-motion";
+import ConfirmationModal from "@/components/admin/ConfirmationModal";
 
 const CATEGORIES = ["supplements", "electronics"];
 
@@ -42,20 +43,127 @@ function Badge({ children, color = "gray" }) {
 }
 
 function ProductForm({ product, isNew, onSave, onCancel, loading }) {
-  const [form, setForm] = useState(product);
+  const [form, setForm] = useState(() => {
+    const images = Array.isArray(product.images) ? [...product.images] : (product.image ? [product.image] : []);
+    return {
+      ...product,
+      images,
+    };
+  });
   const set = (k, v) => setForm((f) => ({ ...f, [k]: v }));
+  
+  const [categories, setCategories] = useState([]);
+  const [addingNewSub, setAddingNewSub] = useState(false);
+  const [newSubName, setNewSubName] = useState("");
+  const [savingSub, setSavingSub] = useState(false);
 
-  const handleSubmit = (e) => {
-    e.preventDefault();
-    onSave(form);
+  useEffect(() => {
+    fetch("/api/admin/categories")
+      .then((r) => r.json())
+      .then((data) => {
+        if (Array.isArray(data)) setCategories(data);
+      });
+  }, []);
+
+  const activeCategory = categories.find((c) => c.slug === (form.category || "supplements"));
+  const subcategories = activeCategory?.children || [];
+
+  const handleCategoryChange = (catSlug) => {
+    setForm((f) => ({
+      ...f,
+      category: catSlug,
+      subCategory: "",
+    }));
+    setAddingNewSub(false);
+    setNewSubName("");
   };
 
-  const handleImage = (e) => {
-    const file = e.target.files[0];
-    if (!file) return;
-    const reader = new FileReader();
-    reader.onloadend = () => set("image", reader.result);
-    reader.readAsDataURL(file);
+  const handleSubCategorySelect = (e) => {
+    const val = e.target.value;
+    if (val === "__add_new__") {
+      setAddingNewSub(true);
+      set("subCategory", "");
+    } else {
+      setAddingNewSub(false);
+      set("subCategory", val);
+    }
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setSavingSub(true);
+    let finalForm = { ...form };
+
+    // If adding a brand new subcategory, save it to the DB first
+    if (addingNewSub && newSubName.trim() && activeCategory) {
+      const newSlug = newSubName.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "");
+      const exists = activeCategory.children?.some(s => s.slug === newSlug);
+      if (!exists) {
+        try {
+          const newSubObj = { name: newSubName, slug: newSlug, visible: true };
+          await fetch("/api/admin/categories", {
+            method: "PUT",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              id: activeCategory._id,
+              ...activeCategory,
+              children: [...(activeCategory.children || []), newSubObj]
+            })
+          });
+          toast.success(`Created new subcategory "${newSubName}" successfully!`);
+          finalForm.subCategory = newSlug;
+        } catch (err) {
+          console.error("Failed to create subcategory:", err);
+          toast.error("Failed to create subcategory, but saving product...");
+        }
+      } else {
+        finalForm.subCategory = newSlug;
+      }
+    }
+
+    setSavingSub(false);
+    onSave(finalForm);
+  };
+
+  const handleMultipleImages = (e) => {
+    const files = Array.from(e.target.files);
+    if (files.length === 0) return;
+
+    files.forEach((file) => {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setForm((prev) => {
+          const currentImages = prev.images || [];
+          const newImages = [...currentImages, reader.result];
+          const primaryImage = prev.image || newImages[0];
+          return {
+            ...prev,
+            images: newImages,
+            image: primaryImage,
+          };
+        });
+      };
+      reader.readAsDataURL(file);
+    });
+  };
+
+  const removeImage = (indexToRemove) => {
+    setForm((prev) => {
+      const newImages = (prev.images || []).filter((_, idx) => idx !== indexToRemove);
+      let primaryImage = prev.image;
+      if (prev.image === prev.images[indexToRemove]) {
+        primaryImage = newImages.length > 0 ? newImages[0] : "";
+      }
+      return {
+        ...prev,
+        images: newImages,
+        image: primaryImage,
+      };
+    });
+  };
+
+  const setAsPrimary = (img) => {
+    set("image", img);
   };
 
   return (
@@ -97,13 +205,19 @@ function ProductForm({ product, isNew, onSave, onCancel, loading }) {
             </label>
             <select
               value={form.category || "supplements"}
-              onChange={(e) => set("category", e.target.value)}
+              onChange={(e) => handleCategoryChange(e.target.value)}
               className="w-full px-4 py-2.5 border border-border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all bg-card">
-              {CATEGORIES.map((c) => (
-                <option key={c} value={c}>
-                  {c.charAt(0).toUpperCase() + c.slice(1)}
+              {categories.map((c) => (
+                <option key={c._id} value={c.slug}>
+                  {c.name}
                 </option>
               ))}
+              {categories.length === 0 && (
+                <>
+                  <option value="supplements">Supplements</option>
+                  <option value="electronics">Electronics</option>
+                </>
+              )}
             </select>
           </div>
           {/* Subcategory */}
@@ -111,12 +225,51 @@ function ProductForm({ product, isNew, onSave, onCancel, loading }) {
             <label className="block text-xs font-bold text-muted-foreground uppercase tracking-widest mb-2">
               Subcategory
             </label>
-            <input
-              value={form.subCategory || ""}
-              onChange={(e) => set("subCategory", e.target.value)}
-              className="w-full px-4 py-2.5 border border-border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all"
-              placeholder="e.g. Whey Protein, Creatine, Chargers"
-            />
+            <div className="space-y-3">
+              {!addingNewSub ? (
+                <select
+                  value={form.subCategory || ""}
+                  onChange={handleSubCategorySelect}
+                  className="w-full px-4 py-2.5 border border-border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all bg-card"
+                >
+                  <option value="">-- Select Subcategory --</option>
+                  {subcategories.map((s) => (
+                    <option key={s._id || s.slug} value={s.slug}>
+                      {s.name}
+                    </option>
+                  ))}
+                  <option value="__add_new__" className="text-primary font-bold">
+                    + Add New Subcategory...
+                  </option>
+                </select>
+              ) : (
+                <div className="flex gap-2">
+                  <input
+                    required
+                    value={newSubName}
+                    onChange={(e) => {
+                      const name = e.target.value;
+                      setNewSubName(name);
+                      const slug = name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "");
+                      set("subCategory", slug);
+                    }}
+                    className="flex-1 px-4 py-2.5 border border-border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all"
+                    placeholder="Enter new subcategory name..."
+                  />
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setAddingNewSub(false);
+                      set("subCategory", "");
+                      setNewSubName("");
+                    }}
+                    className="px-4 py-2.5 border border-border rounded-xl text-xs font-bold hover:bg-muted transition-colors uppercase tracking-wider"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              )}
+            </div>
           </div>
           {/* Brand */}
           <div>
@@ -144,8 +297,6 @@ function ProductForm({ product, isNew, onSave, onCancel, loading }) {
               placeholder="0"
             />
           </div>
-
-
 
           {/* Stock */}
           <div>
@@ -185,38 +336,73 @@ function ProductForm({ product, isNew, onSave, onCancel, loading }) {
               placeholder="Detailed information about the product..."
             />
           </div>
-          {/* Image */}
-          <div className="md:col-span-2">
-            <label className="block text-xs font-bold text-muted-foreground uppercase tracking-widest mb-2">
-              Product Image
+          
+          {/* Images Gallery */}
+          <div className="md:col-span-2 border-t border-border pt-6">
+            <label className="block text-xs font-bold text-muted-foreground uppercase tracking-widest mb-3">
+              Product Images / Gallery (Upload Multiple)
             </label>
-            <div className="flex items-center gap-6 p-4 rounded-2xl bg-muted/30 border border-border/50">
-              <div className="h-24 w-24 rounded-2xl border-2 border-dashed border-border bg-card flex items-center justify-center overflow-hidden flex-shrink-0">
-                {form.image ?
-                  <img
-                    src={form.image}
-                    alt=""
-                    className="h-full w-full object-cover"
-                  />
-                : <ImageIcon className="h-8 w-8 text-muted-foreground/30" />}
-              </div>
-              <div className="space-y-2">
-                <p className="text-xs text-muted-foreground">
-                  Upload a high-quality product image. Recommended size
-                  1000x1000px.
-                </p>
-                <label className="inline-flex items-center gap-2 px-4 py-2 rounded-xl border border-border bg-card text-sm font-semibold text-foreground hover:bg-muted cursor-pointer transition-colors shadow-sm">
-                  <Plus className="h-4 w-4" /> Change Image
-                  <input
-                    type="file"
-                    accept="image/*"
-                    onChange={handleImage}
-                    className="hidden"
-                  />
-                </label>
-              </div>
+            <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-5 gap-4">
+              {(form.images || []).map((img, idx) => {
+                const isPrimary = form.image === img;
+                return (
+                  <div
+                    key={idx}
+                    className={`relative aspect-square rounded-2xl border-2 overflow-hidden bg-muted group transition-all ${
+                      isPrimary ? "border-primary shadow-glow-primary/20 scale-[1.02]" : "border-border hover:border-muted-foreground/30"
+                    }`}
+                  >
+                    <img
+                      src={img}
+                      alt={`Product image ${idx + 1}`}
+                      className="w-full h-full object-cover"
+                    />
+                    {/* Primary Badge */}
+                    <div className="absolute top-2 left-2 flex gap-1">
+                      {isPrimary ? (
+                        <span className="bg-primary text-primary-foreground text-[9px] font-black uppercase tracking-wider px-2 py-0.5 rounded-md shadow-sm">
+                          Primary
+                        </span>
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={() => setAsPrimary(img)}
+                          className="opacity-0 group-hover:opacity-100 bg-black/60 backdrop-blur-sm text-white text-[9px] font-black uppercase tracking-wider px-2 py-0.5 rounded-md hover:bg-black/80 transition-all"
+                        >
+                          Make Primary
+                        </button>
+                      )}
+                    </div>
+                    {/* Delete button */}
+                    <button
+                      type="button"
+                      onClick={() => removeImage(idx)}
+                      className="absolute top-2 right-2 p-1.5 rounded-lg bg-red-500/90 text-white hover:bg-red-600 transition-colors shadow-sm"
+                    >
+                      <Trash2 className="h-3.5 w-3.5" />
+                    </button>
+                  </div>
+                );
+              })}
+              
+              {/* Add Image Button Card */}
+              <label className="aspect-square rounded-2xl border-2 border-dashed border-border hover:border-primary/50 bg-muted/10 hover:bg-muted/20 flex flex-col items-center justify-center cursor-pointer transition-all gap-2 text-muted-foreground hover:text-primary">
+                <Plus className="h-6 w-6" />
+                <span className="text-[10px] font-bold uppercase tracking-wider">Add Images</span>
+                <input
+                  type="file"
+                  multiple
+                  accept="image/*"
+                  onChange={handleMultipleImages}
+                  className="hidden"
+                />
+              </label>
             </div>
+            <p className="text-[10px] text-muted-foreground mt-3 uppercase tracking-wide">
+              * Click "Make Primary" on any image card to set it as the primary cover image. You can select and upload multiple images at once.
+            </p>
           </div>
+
           {/* Sizes */}
           <div className="md:col-span-2 border-t border-border pt-6">
             <div className="flex items-center justify-between mb-4">
@@ -285,9 +471,9 @@ function ProductForm({ product, isNew, onSave, onCancel, loading }) {
         <div className="flex items-center gap-4 mt-8 pt-6 border-t border-border">
           <button
             type="submit"
-            disabled={loading}
+            disabled={loading || savingSub}
             className="px-8 py-3 bg-primary text-primary-foreground text-sm font-bold rounded-xl hover:bg-primary/90 transition-all disabled:opacity-60 shadow-glow-primary uppercase tracking-widest">
-            {loading ?
+            {loading || savingSub ?
               "Processing..."
             : isNew ?
               "Create Product"
@@ -297,7 +483,7 @@ function ProductForm({ product, isNew, onSave, onCancel, loading }) {
             <button
               type="button"
               onClick={() => onSave(form, true)}
-              disabled={loading}
+              disabled={loading || savingSub}
               className="px-6 py-3 border border-emerald-600/35 text-emerald-600 bg-emerald-50 hover:bg-emerald-100/50 text-sm font-bold rounded-xl transition-all disabled:opacity-60 uppercase tracking-widest active:scale-95">
               Save & Add Another
             </button>
@@ -325,6 +511,8 @@ function ProductsContent() {
   const [viewMode, setViewMode] = useState("table");
   const [selected, setSelected] = useState([]);
   const searchParams = useSearchParams();
+  const [confirmDelete, setConfirmDelete] = useState(null);
+  const [bulkConfirm, setBulkConfirm] = useState(false);
 
   const fetchProducts = async () => {
     const res = await fetch("/api/products", { cache: "no-store" });
@@ -351,6 +539,7 @@ function ProductsContent() {
       popularity: 0,
       benefits: "",
       sizes: [],
+      images: [],
     });
   };
 
@@ -508,10 +697,26 @@ function ProductsContent() {
   };
 
   const deleteProduct = async (id) => {
-    if (!confirm("Delete this product?")) return;
-    await fetch(`/api/products/${id}`, { method: "DELETE" });
+    const prod = products.find(p => p._id === id);
+    if (prod) setConfirmDelete(prod);
+  };
+
+  const executeDelete = async () => {
+    if (!confirmDelete) return;
+    await fetch(`/api/products/${confirmDelete._id}`, { method: "DELETE" });
     toast.success("Product deleted");
+    setConfirmDelete(null);
     fetchProducts();
+  };
+
+  const executeBulkDelete = async () => {
+    setBulkConfirm(false);
+    for (const id of selected) {
+      await fetch(`/api/products/${id}`, { method: "DELETE" });
+    }
+    setSelected([]);
+    fetchProducts();
+    toast.success("Deleted selected products");
   };
 
   const filtered = products.filter((p) => {
@@ -652,14 +857,7 @@ function ProductsContent() {
             {selected.length} products selected
           </span>
           <button
-            onClick={async () => {
-              if (!confirm(`Delete ${selected.length} products?`)) return;
-              for (const id of selected)
-                await fetch(`/api/products/${id}`, { method: "DELETE" });
-              setSelected([]);
-              fetchProducts();
-              toast.success("Deleted selected products");
-            }}
+            onClick={() => setBulkConfirm(true)}
             className="px-4 py-1.5 bg-red-500 text-white text-xs font-bold rounded-lg hover:bg-red-600 transition-colors uppercase tracking-wider">
             Delete Selected
           </button>
@@ -905,6 +1103,22 @@ function ProductsContent() {
           </div>
         </div>
       )}
+
+      <ConfirmationModal
+        isOpen={!!confirmDelete}
+        onClose={() => setConfirmDelete(null)}
+        onConfirm={executeDelete}
+        title="Delete Product"
+        message={`Are you sure you want to delete "${confirmDelete?.name}"? All reviews associated with this product will also be deleted.`}
+      />
+
+      <ConfirmationModal
+        isOpen={bulkConfirm}
+        onClose={() => setBulkConfirm(false)}
+        onConfirm={executeBulkDelete}
+        title="Bulk Delete Products"
+        message={`Are you sure you want to delete the ${selected.length} selected products?`}
+      />
     </div>
   );
 }

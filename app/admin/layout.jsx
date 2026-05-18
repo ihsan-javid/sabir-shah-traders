@@ -195,7 +195,6 @@ export default function AdminLayout({ children }) {
       items: [
         { href: "/admin/seo", label: "SEO Settings", icon: Globe },
         { href: "/admin/policies", label: "Policy Settings", icon: FileText },
-        { href: "/admin/theme", label: "Theme Settings", icon: Palette },
         { href: "/admin/settings", label: "Settings", icon: Settings2 },
       ],
     },

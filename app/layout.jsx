@@ -28,10 +28,10 @@ export default function RootLayout({ children }) {
     <html lang="en" suppressHydrationWarning>
       <body suppressHydrationWarning>
         <StoreSettingsProvider>
-          <MaintenanceGuard>
+          <Preloader />
+          <>
             <ThemeProvider defaultTheme="light">
               <SmoothScroll />
-              <Preloader />
               <div className="fixed top-0 inset-x-0 z-[100]">
                 <AnnouncementBar />
                 <Header />
@@ -41,7 +41,7 @@ export default function RootLayout({ children }) {
               <WhatsAppFab />
               <Toaster />
             </ThemeProvider>
-          </MaintenanceGuard>
+          </>
         </StoreSettingsProvider>
       </body>
     </html>

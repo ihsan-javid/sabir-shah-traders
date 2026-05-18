@@ -21,20 +21,36 @@ function Field({ label, className = "", ...rest }) {
 
 export default function ContactClient() {
   const { settings } = useStoreSettings();
+  const contactEmail = settings?.contactEmail || "info@sabirshah.pk";
   const [sending, setSending] = useState(false);
-  const submit = (e) => {
+  const submit = async (e) => {
     e.preventDefault();
     setSending(true);
-    setTimeout(() => {
-      setSending(false);
-      toast.success("Message sent! We'll get back to you within 24 hours.");
+    const formData = new FormData(e.target);
+    const name = formData.get("name");
+    const email = formData.get("email");
+    const subject = formData.get("subject") || "Contact Form Submission";
+    const message = formData.get("message");
+    
+    try {
+      const res = await fetch("/api/contact", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name, email, subject, message }),
+      });
+      const data = await res.json();
+      
+      if (!res.ok) throw new Error(data.error || "Failed to send message.");
+      
+      toast.success("Message sent successfully!");
       e.target.reset();
-    }, 800);
+    } catch (err) {
+      toast.error(err.message);
+    } finally {
+      setSending(false);
+    }
   };
 
-  const contactPhone = settings?.contactPhone || "+92 300 0000000";
-  const contactEmail = settings?.contactEmail || "info@sabirshah.pk";
-  const contactAddress = settings?.contactAddress || "Karachi, Pakistan";
   const waNum = (settings?.whatsappNumber || "923000000000").replace(/\D/g, "");
 
   return (
@@ -67,6 +83,7 @@ export default function ContactClient() {
             <label className="block">
               <span className="text-xs text-muted-foreground">Message</span>
               <textarea
+                name="message"
                 required
                 rows={5}
                 className="mt-1.5 w-full rounded-xl bg-surface-elevated border border-border px-4 py-3 text-sm focus:outline-none focus:border-tech focus:ring-2 focus:ring-tech/30 transition resize-none"
@@ -95,18 +112,12 @@ export default function ContactClient() {
             >
               <MessageCircle className="h-5 w-5 text-health" />
               <div className="mt-3 font-semibold">WhatsApp</div>
-              <div className="text-sm text-muted-foreground mt-1">{contactPhone}</div>
-              <div className="text-[11px] text-muted-foreground mt-2">Avg reply: under 5 minutes</div>
+              <div className="text-sm text-muted-foreground mt-1">{settings?.whatsappNumber || "+92 300 0000000"}</div>
             </a>
             <div className="rounded-2xl glass p-5">
               <Mail className="h-5 w-5 text-tech" />
               <div className="mt-3 font-semibold">Email</div>
               <div className="text-sm text-muted-foreground mt-1">{contactEmail}</div>
-            </div>
-            <div className="rounded-2xl glass p-5">
-              <MapPin className="h-5 w-5 text-gold" />
-              <div className="mt-3 font-semibold">Office</div>
-              <div className="text-sm text-muted-foreground mt-1">{contactAddress}</div>
             </div>
           </motion.div>
         </div>

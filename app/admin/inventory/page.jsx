@@ -2,6 +2,7 @@
 
 import React, { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import { toast } from "sonner";
 import {
   AdminSpinner,
   AdminError,
@@ -176,7 +177,7 @@ export default function AdminInventory() {
         );
       }
     } catch (err) {
-      alert("Error saving: " + err.message);
+      toast.error("Error saving: " + err.message);
     } finally {
       setSavingId(null);
     }
