@@ -703,20 +703,37 @@ function ProductsContent() {
 
   const executeDelete = async () => {
     if (!confirmDelete) return;
-    await fetch(`/api/products/${confirmDelete._id}`, { method: "DELETE" });
-    toast.success("Product deleted");
-    setConfirmDelete(null);
-    fetchProducts();
+    try {
+      const res = await fetch(`/api/products/${confirmDelete._id}`, { method: "DELETE" });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error || "Failed to delete product");
+      toast.success("Product deleted");
+      setSelected((prev) => prev.filter((id) => id !== confirmDelete._id));
+      setConfirmDelete(null);
+      fetchProducts();
+    } catch (error) {
+      toast.error(error.message);
+    }
   };
 
   const executeBulkDelete = async () => {
     setBulkConfirm(false);
+    let successCount = 0;
     for (const id of selected) {
-      await fetch(`/api/products/${id}`, { method: "DELETE" });
+      try {
+        const res = await fetch(`/api/products/${id}`, { method: "DELETE" });
+        if (res.ok) successCount++;
+        else {
+           const d = await res.json().catch(() => ({}));
+           toast.error(`Failed to delete product: ${d.error || res.statusText}`);
+        }
+      } catch (err) {
+        toast.error(`Error deleting product: ${err.message}`);
+      }
     }
     setSelected([]);
     fetchProducts();
-    toast.success("Deleted selected products");
+    if (successCount > 0) toast.success(`Deleted ${successCount} products`);
   };
 
   const filtered = products.filter((p) => {
