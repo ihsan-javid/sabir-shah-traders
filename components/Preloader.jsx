@@ -1,42 +1,33 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import { usePathname } from "next/navigation";
+import { usePreloader } from "./PreloaderProvider";
 
 export function Preloader() {
-  const [removed, setRemoved] = useState(false);
+  const { isPreloaderActive, isPreloaderExiting } = usePreloader();
   const pathname = usePathname();
-  const isAdmin = pathname?.startsWith("/admin");
 
   useEffect(() => {
-    if (isAdmin) {
-      setRemoved(true);
-      return;
-    }
-
-    document.documentElement.style.overflow = "hidden";
-    document.body.style.overflow = "hidden";
-
-    // Total duration: 0.3s fade-in + 1.2s count + 0.5s hold + 0.6s exit = ~2.6s
-    // We remove the DOM element after the CSS exit animation completes
-    const t = setTimeout(() => {
-      setRemoved(true);
+    if (isPreloaderActive) {
+      document.documentElement.style.overflow = "hidden";
+      document.body.style.overflow = "hidden";
+    } else {
       document.documentElement.style.overflow = "";
       document.body.style.overflow = "";
-    }, 2700);
+    }
 
     return () => {
-      clearTimeout(t);
       document.documentElement.style.overflow = "";
       document.body.style.overflow = "";
     };
-  }, [isAdmin]);
+  }, [isPreloaderActive]);
 
-  if (removed) return null;
+  if (!isPreloaderActive) return null;
 
   return (
-    <>
-      <div className="preloader-screen">
+    <div key={pathname}>
+      <div className={`preloader-screen ${isPreloaderExiting ? "preloader-screen-exit" : ""}`}>
         {/* Main Logo */}
         <div className="preloader-logo-wrap">
           <div className="preloader-logo-inner">
@@ -72,7 +63,10 @@ export function Preloader() {
           justify-content: center;
           background: #000;
           color: #fff;
-          animation: preloaderExit 0.8s cubic-bezier(0.83, 0, 0.17, 1) 1.9s forwards;
+        }
+
+        .preloader-screen-exit {
+          animation: preloaderExit 0.8s cubic-bezier(0.83, 0, 0.17, 1) forwards;
         }
 
         .preloader-logo-wrap {
@@ -153,6 +147,6 @@ export function Preloader() {
           to   { transform: translateY(-100%); }
         }
       `}</style>
-    </>
+    </div>
   );
 }

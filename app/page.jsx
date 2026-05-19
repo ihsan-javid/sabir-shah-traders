@@ -24,6 +24,7 @@ import { ReviewMarquee } from "@/components/ui/review-marquee";
 import { FlowButton } from "@/components/ui/flow-button";
 import { ButtonWithIcon } from "@/components/ui/button-with-icon";
 import { useStoreSettings } from "@/components/StoreSettingsProvider";
+import { usePreloader } from "@/components/PreloaderProvider";
 
 import {
   IdentityCardBody,
@@ -112,6 +113,7 @@ export default function HomePage() {
 function Hero() {
   const heroRef = useRef(null);
   const { settings } = useStoreSettings();
+  const { showPageContent } = usePreloader();
   const heroTitle =
     settings?.heroTitle || "Fuel your strength. Trust your source.";
   const heroDescription =
@@ -133,30 +135,31 @@ function Hero() {
 
   useGSAP(
     () => {
+      if (!showPageContent) return;
       gsap.from(".hero-line", {
         yPercent: 100,
-        stagger: 0.15,
-        duration: 1.2,
+        stagger: 0.12,
+        duration: 0.9,
         ease: "expo.out",
-        delay: 0.3,
+        delay: 0.2,
       });
       gsap.from(".hero-fade", {
         opacity: 0,
-        y: 30,
-        stagger: 0.1,
-        duration: 1.2,
+        y: 20,
+        stagger: 0.08,
+        duration: 0.9,
         ease: "expo.out",
-        delay: 0.6,
+        delay: 0.4,
       });
       gsap.from(".hero-img", {
         opacity: 0,
-        scale: 1.08,
-        duration: 1.6,
+        scale: 1.05,
+        duration: 1.2,
         ease: "expo.out",
-        delay: 0.1,
+        delay: 0.05,
       });
     },
-    { scope: heroRef, dependencies: [heroTitle] },
+    { scope: heroRef, dependencies: [heroTitle, showPageContent] },
   );
 
   return (

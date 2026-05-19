@@ -9,6 +9,8 @@ import { Preloader } from "@/components/Preloader";
 import { ThemeProvider } from "@/components/ThemeProvider";
 import { StoreSettingsProvider } from "@/components/StoreSettingsProvider";
 import { MaintenanceGuard } from "@/components/MaintenanceGuard";
+import { PreloaderProvider } from "@/components/PreloaderProvider";
+import { PageTransition } from "@/components/PageTransition";
 
 export const metadata = {
   title: "Sabir Shah Traders — Premium Electronics & Supplements",
@@ -27,22 +29,24 @@ export default function RootLayout({ children }) {
   return (
     <html lang="en" suppressHydrationWarning>
       <body suppressHydrationWarning>
-        <StoreSettingsProvider>
-          <Preloader />
-          <>
+        <PreloaderProvider>
+          <StoreSettingsProvider>
+            <Preloader />
             <ThemeProvider defaultTheme="light">
               <SmoothScroll />
               <div className="fixed top-0 inset-x-0 z-[100]">
                 <AnnouncementBar />
                 <Header />
               </div>
-              <main className="min-h-screen ">{children}</main>
+              <main className="min-h-screen">
+                <PageTransition>{children}</PageTransition>
+              </main>
               <Footer />
               <WhatsAppFab />
               <Toaster />
             </ThemeProvider>
-          </>
-        </StoreSettingsProvider>
+          </StoreSettingsProvider>
+        </PreloaderProvider>
       </body>
     </html>
   );
