@@ -17,6 +17,9 @@ export const metadata = {
   title: "Sabir Shah Traders — Premium Electronics & Supplements",
   description:
     "Pakistan's trusted online store for premium electronics and authentic food supplements. Cash on delivery available.",
+  verification: {
+    google: "OAxB3yApCqqQgYLR8qk9u90plqe1UNNMMNmJPD38EKY",
+  },
   openGraph: {
     title: "Sabir Shah Traders — Premium Electronics & Supplements",
     description:
