@@ -32,17 +32,21 @@ export async function POST(req) {
         const categoryDoc = await Category.findOne({ slug: p.category });
         if (categoryDoc) {
           const exists = (categoryDoc.children || []).some(
-            sc => sc.slug === p.subCategory || sc.name.toLowerCase() === p.subCategoryName.toLowerCase()
+            (sc) =>
+              sc.slug === p.subCategory ||
+              sc.name.toLowerCase() === p.subCategoryName.toLowerCase(),
           );
           if (!exists) {
             categoryDoc.children.push({
               name: p.subCategoryName,
               slug: p.subCategory,
               description: "",
-              visible: true
+              visible: true,
             });
             await categoryDoc.save();
-            autoCreatedSubcats.push(`${p.subCategoryName} (under ${categoryDoc.name})`);
+            autoCreatedSubcats.push(
+              `${p.subCategoryName} (under ${categoryDoc.name})`,
+            );
           }
         }
       }
@@ -51,7 +55,7 @@ export async function POST(req) {
         .toLowerCase()
         .replace(/[^a-z0-9]+/g, "-")
         .replace(/(^-|-$)/g, "");
-      
+
       let uniqueSlug = baseSlug;
       let counter = 1;
       while (await Product.findOne({ slug: uniqueSlug })) {
@@ -64,12 +68,21 @@ export async function POST(req) {
       preparedProducts.push({
         name: p.name,
         description: p.description || "",
+        tagline: p.tagline || "",
         price: Number(p.price),
         category: p.category,
         subCategory: p.subCategory || "",
+        brand: p.brand || "",
         stock: Number(p.stock) || 0,
         image: p.image || "",
         images: p.image ? [p.image] : [],
+        sizes: Array.isArray(p.sizes) ? p.sizes : [],
+        features: Array.isArray(p.features) ? p.features : [],
+        specifications: Array.isArray(p.specifications) ? p.specifications : [],
+        highlights: Array.isArray(p.highlights) ? p.highlights : [],
+        tags: Array.isArray(p.tags) ? p.tags : [],
+        keyPoints: Array.isArray(p.keyPoints) ? p.keyPoints : [],
+        benefits: Array.isArray(p.benefits) ? p.benefits : [],
         slug: uniqueSlug,
         sku,
         active: true,
@@ -81,12 +94,12 @@ export async function POST(req) {
 
     return NextResponse.json(
       { success: true, count: inserted.length, autoCreatedSubcats },
-      { headers: securityHeaders }
+      { headers: securityHeaders },
     );
   } catch (err) {
     return NextResponse.json(
       { error: err.message },
-      { status: 500, headers: securityHeaders }
+      { status: 500, headers: securityHeaders },
     );
   }
 }

@@ -44,14 +44,32 @@ function Badge({ children, color = "gray" }) {
 
 function ProductForm({ product, isNew, onSave, onCancel, loading }) {
   const [form, setForm] = useState(() => {
-    const images = Array.isArray(product.images) ? [...product.images] : (product.image ? [product.image] : []);
+    const images =
+      Array.isArray(product.images) ? [...product.images]
+      : product.image ? [product.image]
+      : [];
+
+    // Helper to ensure array fields are arrays
+    const toArray = (val) => {
+      if (Array.isArray(val)) return val;
+      if (typeof val === "string" && val.trim()) return [val];
+      return [];
+    };
+
     return {
       ...product,
       images,
+      benefits: toArray(product.benefits),
+      features: toArray(product.features),
+      highlights: toArray(product.highlights),
+      keyPoints: toArray(product.keyPoints),
+      tags: toArray(product.tags),
+      specifications:
+        Array.isArray(product.specifications) ? product.specifications : [],
     };
   });
   const set = (k, v) => setForm((f) => ({ ...f, [k]: v }));
-  
+
   const [categories, setCategories] = useState([]);
   const [addingNewSub, setAddingNewSub] = useState(false);
   const [newSubName, setNewSubName] = useState("");
@@ -65,8 +83,17 @@ function ProductForm({ product, isNew, onSave, onCancel, loading }) {
       });
   }, []);
 
-  const activeCategory = categories.find((c) => c.slug === (form.category || "supplements"));
+  const activeCategory = categories.find(
+    (c) => c.slug === (form.category || "supplements"),
+  );
   const subcategories = activeCategory?.children || [];
+
+  // Helper to safely convert array to string for textarea display
+  const arrayToString = (val) => {
+    if (typeof val === "string") return val;
+    if (Array.isArray(val)) return val.join(", ");
+    return "";
+  };
 
   const handleCategoryChange = (catSlug) => {
     setForm((f) => ({
@@ -96,8 +123,11 @@ function ProductForm({ product, isNew, onSave, onCancel, loading }) {
 
     // If adding a brand new subcategory, save it to the DB first
     if (addingNewSub && newSubName.trim() && activeCategory) {
-      const newSlug = newSubName.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "");
-      const exists = activeCategory.children?.some(s => s.slug === newSlug);
+      const newSlug = newSubName
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, "-")
+        .replace(/(^-|-$)/g, "");
+      const exists = activeCategory.children?.some((s) => s.slug === newSlug);
       if (!exists) {
         try {
           const newSubObj = { name: newSubName, slug: newSlug, visible: true };
@@ -107,10 +137,12 @@ function ProductForm({ product, isNew, onSave, onCancel, loading }) {
             body: JSON.stringify({
               id: activeCategory._id,
               ...activeCategory,
-              children: [...(activeCategory.children || []), newSubObj]
-            })
+              children: [...(activeCategory.children || []), newSubObj],
+            }),
           });
-          toast.success(`Created new subcategory "${newSubName}" successfully!`);
+          toast.success(
+            `Created new subcategory "${newSubName}" successfully!`,
+          );
           finalForm.subCategory = newSlug;
         } catch (err) {
           console.error("Failed to create subcategory:", err);
@@ -149,7 +181,9 @@ function ProductForm({ product, isNew, onSave, onCancel, loading }) {
 
   const removeImage = (indexToRemove) => {
     setForm((prev) => {
-      const newImages = (prev.images || []).filter((_, idx) => idx !== indexToRemove);
+      const newImages = (prev.images || []).filter(
+        (_, idx) => idx !== indexToRemove,
+      );
       let primaryImage = prev.image;
       if (prev.image === prev.images[indexToRemove]) {
         primaryImage = newImages.length > 0 ? newImages[0] : "";
@@ -226,31 +260,34 @@ function ProductForm({ product, isNew, onSave, onCancel, loading }) {
               Subcategory
             </label>
             <div className="space-y-3">
-              {!addingNewSub ? (
+              {!addingNewSub ?
                 <select
                   value={form.subCategory || ""}
                   onChange={handleSubCategorySelect}
-                  className="w-full px-4 py-2.5 border border-border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all bg-card"
-                >
+                  className="w-full px-4 py-2.5 border border-border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all bg-card">
                   <option value="">-- Select Subcategory --</option>
                   {subcategories.map((s) => (
                     <option key={s._id || s.slug} value={s.slug}>
                       {s.name}
                     </option>
                   ))}
-                  <option value="__add_new__" className="text-primary font-bold">
+                  <option
+                    value="__add_new__"
+                    className="text-primary font-bold">
                     + Add New Subcategory...
                   </option>
                 </select>
-              ) : (
-                <div className="flex gap-2">
+              : <div className="flex gap-2">
                   <input
                     required
                     value={newSubName}
                     onChange={(e) => {
                       const name = e.target.value;
                       setNewSubName(name);
-                      const slug = name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "");
+                      const slug = name
+                        .toLowerCase()
+                        .replace(/[^a-z0-9]+/g, "-")
+                        .replace(/(^-|-$)/g, "");
                       set("subCategory", slug);
                     }}
                     className="flex-1 px-4 py-2.5 border border-border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all"
@@ -263,12 +300,11 @@ function ProductForm({ product, isNew, onSave, onCancel, loading }) {
                       set("subCategory", "");
                       setNewSubName("");
                     }}
-                    className="px-4 py-2.5 border border-border rounded-xl text-xs font-bold hover:bg-muted transition-colors uppercase tracking-wider"
-                  >
+                    className="px-4 py-2.5 border border-border rounded-xl text-xs font-bold hover:bg-muted transition-colors uppercase tracking-wider">
                     Cancel
                   </button>
                 </div>
-              )}
+              }
             </div>
           </div>
           {/* Brand */}
@@ -336,7 +372,7 @@ function ProductForm({ product, isNew, onSave, onCancel, loading }) {
               placeholder="Detailed information about the product..."
             />
           </div>
-          
+
           {/* Images Gallery */}
           <div className="md:col-span-2 border-t border-border pt-6">
             <label className="block text-xs font-bold text-muted-foreground uppercase tracking-widest mb-3">
@@ -349,9 +385,10 @@ function ProductForm({ product, isNew, onSave, onCancel, loading }) {
                   <div
                     key={idx}
                     className={`relative aspect-square rounded-2xl border-2 overflow-hidden bg-muted group transition-all ${
-                      isPrimary ? "border-primary shadow-glow-primary/20 scale-[1.02]" : "border-border hover:border-muted-foreground/30"
-                    }`}
-                  >
+                      isPrimary ?
+                        "border-primary shadow-glow-primary/20 scale-[1.02]"
+                      : "border-border hover:border-muted-foreground/30"
+                    }`}>
                     <img
                       src={img}
                       alt={`Product image ${idx + 1}`}
@@ -359,36 +396,35 @@ function ProductForm({ product, isNew, onSave, onCancel, loading }) {
                     />
                     {/* Primary Badge */}
                     <div className="absolute top-2 left-2 flex gap-1">
-                      {isPrimary ? (
+                      {isPrimary ?
                         <span className="bg-primary text-primary-foreground text-[9px] font-black uppercase tracking-wider px-2 py-0.5 rounded-md shadow-sm">
                           Primary
                         </span>
-                      ) : (
-                        <button
+                      : <button
                           type="button"
                           onClick={() => setAsPrimary(img)}
-                          className="opacity-0 group-hover:opacity-100 bg-black/60 backdrop-blur-sm text-white text-[9px] font-black uppercase tracking-wider px-2 py-0.5 rounded-md hover:bg-black/80 transition-all"
-                        >
+                          className="opacity-0 group-hover:opacity-100 bg-black/60 backdrop-blur-sm text-white text-[9px] font-black uppercase tracking-wider px-2 py-0.5 rounded-md hover:bg-black/80 transition-all">
                           Make Primary
                         </button>
-                      )}
+                      }
                     </div>
                     {/* Delete button */}
                     <button
                       type="button"
                       onClick={() => removeImage(idx)}
-                      className="absolute top-2 right-2 p-1.5 rounded-lg bg-red-500/90 text-white hover:bg-red-600 transition-colors shadow-sm"
-                    >
+                      className="absolute top-2 right-2 p-1.5 rounded-lg bg-red-500/90 text-white hover:bg-red-600 transition-colors shadow-sm">
                       <Trash2 className="h-3.5 w-3.5" />
                     </button>
                   </div>
                 );
               })}
-              
+
               {/* Add Image Button Card */}
               <label className="aspect-square rounded-2xl border-2 border-dashed border-border hover:border-primary/50 bg-muted/10 hover:bg-muted/20 flex flex-col items-center justify-center cursor-pointer transition-all gap-2 text-muted-foreground hover:text-primary">
                 <Plus className="h-6 w-6" />
-                <span className="text-[10px] font-bold uppercase tracking-wider">Add Images</span>
+                <span className="text-[10px] font-bold uppercase tracking-wider">
+                  Add Images
+                </span>
                 <input
                   type="file"
                   multiple
@@ -399,7 +435,8 @@ function ProductForm({ product, isNew, onSave, onCancel, loading }) {
               </label>
             </div>
             <p className="text-[10px] text-muted-foreground mt-3 uppercase tracking-wide">
-              * Click "Make Primary" on any image card to set it as the primary cover image. You can select and upload multiple images at once.
+              * Click "Make Primary" on any image card to set it as the primary
+              cover image. You can select and upload multiple images at once.
             </p>
           </div>
 
@@ -412,7 +449,10 @@ function ProductForm({ product, isNew, onSave, onCancel, loading }) {
               <button
                 type="button"
                 onClick={() =>
-                  set("sizes", [...(form.sizes || []), { label: "", price: 0 }])
+                  set("sizes", [
+                    ...(form.sizes || []),
+                    { label: "", price: 0, stock: 0 },
+                  ])
                 }
                 className="flex items-center gap-1.5 text-xs font-bold text-primary hover:underline uppercase tracking-wider">
                 <Plus className="h-3.5 w-3.5" /> Add New Variant
@@ -423,7 +463,7 @@ function ProductForm({ product, isNew, onSave, onCancel, loading }) {
                 <div
                   key={i}
                   className="flex items-center gap-4 bg-muted/20 p-3 rounded-xl border border-border/50 group transition-all hover:bg-muted/40">
-                  <div className="flex-1 grid grid-cols-2 gap-4">
+                  <div className="flex-1 grid grid-cols-3 gap-4">
                     <input
                       placeholder="Label (e.g. 5LB / 2KG)"
                       value={sz.label}
@@ -441,6 +481,17 @@ function ProductForm({ product, isNew, onSave, onCancel, loading }) {
                       onChange={(e) => {
                         const s = [...form.sizes];
                         s[i] = { ...s[i], price: Number(e.target.value) };
+                        set("sizes", s);
+                      }}
+                      className="px-4 py-2 border border-border rounded-xl text-sm bg-card focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all"
+                    />
+                    <input
+                      type="number"
+                      placeholder="Stock for this variant"
+                      value={sz.stock || 0}
+                      onChange={(e) => {
+                        const s = [...form.sizes];
+                        s[i] = { ...s[i], stock: Number(e.target.value) };
                         set("sizes", s);
                       }}
                       className="px-4 py-2 border border-border rounded-xl text-sm bg-card focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all"
@@ -465,6 +516,240 @@ function ProductForm({ product, isNew, onSave, onCancel, loading }) {
                 </div>
               )}
             </div>
+          </div>
+
+          {/* Features */}
+          <div className="md:col-span-2 border-t border-border pt-6">
+            <label className="block text-xs font-bold text-muted-foreground uppercase tracking-widest mb-3">
+              Features (comma-separated)
+            </label>
+            <textarea
+              rows={2}
+              value={arrayToString(form.features)}
+              onChange={(e) =>
+                set(
+                  "features",
+                  e.target.value
+                    .split(",")
+                    .map((f) => f.trim())
+                    .filter(Boolean),
+                )
+              }
+              className="w-full px-4 py-3 border border-border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all resize-none"
+              placeholder="e.g. 24g Protein per serving, Contains BCAAs, Fast absorbing"
+            />
+          </div>
+
+          {/* Highlights */}
+          <div className="md:col-span-2 border-t border-border pt-6">
+            <label className="block text-xs font-bold text-muted-foreground uppercase tracking-widest mb-3">
+              Highlights (comma-separated)
+            </label>
+            <textarea
+              rows={2}
+              value={arrayToString(form.highlights)}
+              onChange={(e) =>
+                set(
+                  "highlights",
+                  e.target.value
+                    .split(",")
+                    .map((h) => h.trim())
+                    .filter(Boolean),
+                )
+              }
+              className="w-full px-4 py-3 border border-border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all resize-none"
+              placeholder="e.g. #1 Best Seller, Award Winning Quality, Trusted by Athletes"
+            />
+          </div>
+
+          {/* Key Points */}
+          <div className="md:col-span-2 border-t border-border pt-6">
+            <label className="block text-xs font-bold text-muted-foreground uppercase tracking-widest mb-3">
+              Key Points (comma-separated)
+            </label>
+            <textarea
+              rows={2}
+              value={arrayToString(form.keyPoints)}
+              onChange={(e) =>
+                set(
+                  "keyPoints",
+                  e.target.value
+                    .split(",")
+                    .map((k) => k.trim())
+                    .filter(Boolean),
+                )
+              }
+              className="w-full px-4 py-3 border border-border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all resize-none"
+              placeholder="e.g. ISO Certified, GMP Approved, Tested in Labs"
+            />
+          </div>
+
+          {/* Benefits */}
+          <div className="md:col-span-2 border-t border-border pt-6">
+            <label className="block text-xs font-bold text-muted-foreground uppercase tracking-widest mb-3">
+              Benefits (comma-separated)
+            </label>
+            <textarea
+              rows={2}
+              value={arrayToString(form.benefits)}
+              onChange={(e) =>
+                set(
+                  "benefits",
+                  e.target.value
+                    .split(",")
+                    .map((b) => b.trim())
+                    .filter(Boolean),
+                )
+              }
+              className="w-full px-4 py-3 border border-border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all resize-none"
+              placeholder="e.g. Faster recovery, Increased muscle growth, Better performance"
+            />
+          </div>
+
+          {/* Tags */}
+          <div className="md:col-span-2 border-t border-border pt-6">
+            <label className="block text-xs font-bold text-muted-foreground uppercase tracking-widest mb-3">
+              Tags (comma-separated)
+            </label>
+            <textarea
+              rows={2}
+              value={arrayToString(form.tags)}
+              onChange={(e) =>
+                set(
+                  "tags",
+                  e.target.value
+                    .split(",")
+                    .map((t) => t.trim())
+                    .filter(Boolean),
+                )
+              }
+              className="w-full px-4 py-3 border border-border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all resize-none"
+              placeholder="e.g. protein, gym, fitness, supplement"
+            />
+          </div>
+
+          {/* Specifications */}
+          <div className="md:col-span-2 border-t border-border pt-6">
+            <div className="flex items-center justify-between mb-4">
+              <label className="text-xs font-bold text-muted-foreground uppercase tracking-widest">
+                Specifications (Key:Value pairs)
+              </label>
+              <button
+                type="button"
+                onClick={() =>
+                  set("specifications", [
+                    ...(form.specifications || []),
+                    { label: "", value: "" },
+                  ])
+                }
+                className="flex items-center gap-1.5 text-xs font-bold text-primary hover:underline uppercase tracking-wider">
+                <Plus className="h-3.5 w-3.5" /> Add Specification
+              </button>
+            </div>
+            <div className="space-y-3">
+              {(form.specifications || []).map((spec, i) => (
+                <div
+                  key={i}
+                  className="flex items-center gap-4 bg-muted/20 p-3 rounded-xl border border-border/50 group transition-all hover:bg-muted/40">
+                  <div className="flex-1 grid grid-cols-2 gap-4">
+                    <input
+                      placeholder="Key (e.g. Flavor)"
+                      value={spec.label}
+                      onChange={(e) => {
+                        const specs = [...form.specifications];
+                        specs[i] = { ...specs[i], label: e.target.value };
+                        set("specifications", specs);
+                      }}
+                      className="px-4 py-2 border border-border rounded-xl text-sm bg-card focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all"
+                    />
+                    <input
+                      placeholder="Value (e.g. Chocolate)"
+                      value={spec.value}
+                      onChange={(e) => {
+                        const specs = [...form.specifications];
+                        specs[i] = { ...specs[i], value: e.target.value };
+                        set("specifications", specs);
+                      }}
+                      className="px-4 py-2 border border-border rounded-xl text-sm bg-card focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all"
+                    />
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() =>
+                      set(
+                        "specifications",
+                        form.specifications.filter((_, idx) => idx !== i),
+                      )
+                    }
+                    className="p-2 text-red-500 hover:bg-red-50 rounded-xl transition-colors">
+                    <Trash2 className="h-5 w-5" />
+                  </button>
+                </div>
+              ))}
+              {(form.specifications || []).length === 0 && (
+                <div className="text-center py-6 border-2 border-dashed border-border rounded-2xl text-muted-foreground text-sm">
+                  No specifications added yet
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Short Description */}
+          <div className="md:col-span-2 border-t border-border pt-6">
+            <label className="block text-xs font-bold text-muted-foreground uppercase tracking-widest mb-2">
+              Short Description
+            </label>
+            <input
+              value={form.shortDescription || ""}
+              onChange={(e) => set("shortDescription", e.target.value)}
+              className="w-full px-4 py-2.5 border border-border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all"
+              placeholder="Brief description for product listing"
+            />
+          </div>
+
+          {/* Badge */}
+          <div>
+            <label className="block text-xs font-bold text-muted-foreground uppercase tracking-widest mb-2">
+              Badge (e.g. NEW, HOT, SALE)
+            </label>
+            <input
+              value={form.badge || ""}
+              onChange={(e) => set("badge", e.target.value)}
+              className="w-full px-4 py-2.5 border border-border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all"
+              placeholder="e.g. NEW, BESTSELLER, TRENDING"
+            />
+          </div>
+
+          {/* Featured */}
+          <div className="flex items-center gap-3">
+            <input
+              type="checkbox"
+              id="featured"
+              checked={form.featured || false}
+              onChange={(e) => set("featured", e.target.checked)}
+              className="w-5 h-5 rounded border-border cursor-pointer"
+            />
+            <label
+              htmlFor="featured"
+              className="text-sm font-semibold text-foreground cursor-pointer">
+              Featured Product
+            </label>
+          </div>
+
+          {/* Bestseller */}
+          <div className="flex items-center gap-3">
+            <input
+              type="checkbox"
+              id="bestseller"
+              checked={form.bestseller || false}
+              onChange={(e) => set("bestseller", e.target.checked)}
+              className="w-5 h-5 rounded border-border cursor-pointer"
+            />
+            <label
+              htmlFor="bestseller"
+              className="text-sm font-semibold text-foreground cursor-pointer">
+              Bestseller
+            </label>
           </div>
         </div>
 
@@ -530,6 +815,7 @@ function ProductsContent() {
     setEditing({
       name: "",
       tagline: "",
+      shortDescription: "",
       description: "",
       price: "",
       category: "supplements",
@@ -537,7 +823,15 @@ function ProductsContent() {
       brand: "",
       stock: 0,
       popularity: 0,
-      benefits: "",
+      badge: "",
+      featured: false,
+      bestseller: false,
+      benefits: [],
+      features: [],
+      highlights: [],
+      keyPoints: [],
+      tags: [],
+      specifications: [],
       sizes: [],
       images: [],
     });
@@ -567,6 +861,7 @@ function ProductsContent() {
         setEditing({
           name: "",
           tagline: form.tagline || "",
+          shortDescription: form.shortDescription || "",
           description: form.description || "",
           price: "",
           category: form.category || "supplements",
@@ -574,10 +869,21 @@ function ProductsContent() {
           brand: form.brand || "",
           stock: 0,
           popularity: 0,
-          benefits: form.benefits || "",
+          badge: form.badge || "",
+          featured: false,
+          bestseller: false,
+          benefits: form.benefits || [],
+          features: form.features || [],
+          highlights: form.highlights || [],
+          keyPoints: form.keyPoints || [],
+          tags: form.tags || [],
+          specifications: form.specifications || [],
           sizes: [],
+          images: [],
         });
-        toast.info("Prefilled attributes for the next product. Enter a new Name and Price!");
+        toast.info(
+          "Prefilled attributes for the next product. Enter a new Name and Price!",
+        );
       } else {
         setEditing(null);
       }
@@ -604,9 +910,12 @@ function ProductsContent() {
         }
 
         // Normalize headers
-        const headers = lines[0]
-          .split(",")
-          .map((h) => h.trim().replace(/^["']|["']$/g, "").toLowerCase());
+        const headers = lines[0].split(",").map((h) =>
+          h
+            .trim()
+            .replace(/^["']|["']$/g, "")
+            .toLowerCase(),
+        );
 
         const importedProducts = [];
         for (let i = 1; i < lines.length; i++) {
@@ -643,28 +952,94 @@ function ProductsContent() {
           const price = Number(rawProduct.price) || 0;
           const stock = Number(rawProduct.stock) || 0;
           const category = rawProduct.category || "supplements";
-          
+
           // Capture subcategory beautifully
-          const subCategoryName = rawProduct.subcategoryname || rawProduct.subcategory || rawProduct.subCategory || "";
-          const subCategorySlug = subCategoryName
-            ? subCategoryName.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "")
+          const subCategoryName =
+            rawProduct.subcategoryname ||
+            rawProduct.subcategory ||
+            rawProduct.subCategory ||
+            "";
+          const subCategorySlug =
+            subCategoryName ?
+              subCategoryName
+                .toLowerCase()
+                .replace(/[^a-z0-9]+/g, "-")
+                .replace(/(^-|-$)/g, "")
             : "";
+
+          // Helper to parse pipe-separated values into arrays
+          const parseArray = (str) => {
+            if (!str) return [];
+            return str
+              .split("|")
+              .map((item) => item.trim())
+              .filter(Boolean);
+          };
+
+          // Parse size variants (format: "2KG:5500:10 | 5KG:11000:5")
+          const parseSizes = (str) => {
+            if (!str) return [];
+            return str
+              .split("|")
+              .map((item) => {
+                const [label, price, stock] = item.trim().split(":");
+                return {
+                  label: label || "",
+                  price: Number(price) || 0,
+                  stock: Number(stock) || 0,
+                };
+              })
+              .filter((s) => s.label);
+          };
+
+          // Parse specifications (format: "Flavor:Chocolate | Servings:74")
+          const parseSpecs = (str) => {
+            if (!str) return [];
+            return str
+              .split("|")
+              .map((item) => {
+                const [label, value] = item.trim().split(":");
+                return {
+                  label: label ? label.trim() : "",
+                  value: value ? value.trim() : "",
+                };
+              })
+              .filter((s) => s.label && s.value);
+          };
 
           importedProducts.push({
             name,
             description: rawProduct.description || "",
+            tagline: rawProduct["short tagline"] || "",
             price,
             stock,
             category,
             subCategory: subCategorySlug,
             subCategoryName,
             brand: rawProduct.brand || "",
-            image: rawProduct.image || rawProduct.imageUrl || "",
+            image:
+              rawProduct["product image"] ||
+              rawProduct.image ||
+              rawProduct.imageUrl ||
+              "",
+            sizes: parseSizes(
+              rawProduct["size / variant"] || rawProduct.sizes || "",
+            ),
+            features: parseArray(rawProduct.features || ""),
+            specifications: parseSpecs(rawProduct.specifications || ""),
+            highlights: parseArray(rawProduct.highlights || ""),
+            tags: parseArray(rawProduct.tags || ""),
+            keyPoints: parseArray(
+              rawProduct["key points"] || rawProduct.keypoints || "",
+            ),
+            benefits: parseArray(rawProduct.benefits || ""),
           });
         }
 
         if (importedProducts.length === 0) {
-          toast.error("No valid products found in CSV. Headers should contain Name, Price, and Category.");
+          toast.error(
+            "No valid products found in CSV. Headers should contain Name, Price, and Category.",
+          );
           return;
         }
 
@@ -679,7 +1054,9 @@ function ProductsContent() {
         if (res.ok) {
           toast.success(`Successfully imported ${d.count} products!`);
           if (d.autoCreatedSubcats?.length > 0) {
-            toast.info(`Created subcategories: ${d.autoCreatedSubcats.join(", ")}`);
+            toast.info(
+              `Created subcategories: ${d.autoCreatedSubcats.join(", ")}`,
+            );
           }
           fetchProducts();
         } else {
@@ -697,14 +1074,16 @@ function ProductsContent() {
   };
 
   const deleteProduct = async (id) => {
-    const prod = products.find(p => p._id === id);
+    const prod = products.find((p) => p._id === id);
     if (prod) setConfirmDelete(prod);
   };
 
   const executeDelete = async () => {
     if (!confirmDelete) return;
     try {
-      const res = await fetch(`/api/products/${confirmDelete._id}`, { method: "DELETE" });
+      const res = await fetch(`/api/products/${confirmDelete._id}`, {
+        method: "DELETE",
+      });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(data.error || "Failed to delete product");
       toast.success("Product deleted");
@@ -718,14 +1097,18 @@ function ProductsContent() {
 
   const executeBulkDelete = async () => {
     setBulkConfirm(false);
+    const count = selected.length;
+    const toastId = toast.loading(
+      `Deleting ${count} product${count !== 1 ? "s" : ""}...`,
+    );
     let successCount = 0;
     for (const id of selected) {
       try {
         const res = await fetch(`/api/products/${id}`, { method: "DELETE" });
         if (res.ok) successCount++;
         else {
-           const d = await res.json().catch(() => ({}));
-           toast.error(`Failed to delete product: ${d.error || res.statusText}`);
+          const d = await res.json().catch(() => ({}));
+          toast.error(`Failed to delete product: ${d.error || res.statusText}`);
         }
       } catch (err) {
         toast.error(`Error deleting product: ${err.message}`);
@@ -733,7 +1116,14 @@ function ProductsContent() {
     }
     setSelected([]);
     fetchProducts();
-    if (successCount > 0) toast.success(`Deleted ${successCount} products`);
+    if (successCount > 0) {
+      toast.success(
+        `Successfully deleted ${successCount} product${successCount !== 1 ? "s" : ""}`,
+        { id: toastId },
+      );
+    } else {
+      toast.error(`Failed to delete products`, { id: toastId });
+    }
   };
 
   const filtered = products.filter((p) => {
@@ -804,7 +1194,8 @@ function ProductsContent() {
             <Download className="h-4 w-4 text-primary" /> Export
           </button>
           <label className="flex items-center gap-2 px-5 py-2.5 bg-card border border-border text-foreground font-black uppercase tracking-widest text-[10px] rounded-xl hover:bg-muted transition-all shadow-sm active:scale-95 cursor-pointer">
-            <Download className="h-4 w-4 text-emerald-600 rotate-180" /> Import CSV
+            <Download className="h-4 w-4 text-emerald-600 rotate-180" /> Import
+            CSV
             <input
               type="file"
               accept=".csv"
@@ -981,11 +1372,11 @@ function ProductsContent() {
                               sku: undefined,
                               name: `${p.name} (Copy)`,
                               benefits:
-                                Array.isArray(p.benefits) ?
-                                  p.benefits.join(", ")
-                                : p.benefits,
+                                Array.isArray(p.benefits) ? p.benefits : [],
                             });
-                            toast.info("Product cloned! Make edits and click Save.");
+                            toast.info(
+                              "Product cloned! Make edits and click Save.",
+                            );
                           }}
                           className="p-2 rounded-lg border border-border bg-card text-muted-foreground hover:text-emerald-600 hover:border-emerald-600 transition-all shadow-sm"
                           title="Clone Product">
@@ -997,9 +1388,7 @@ function ProductsContent() {
                             setEditing({
                               ...p,
                               benefits:
-                                Array.isArray(p.benefits) ?
-                                  p.benefits.join(", ")
-                                : p.benefits,
+                                Array.isArray(p.benefits) ? p.benefits : [],
                             });
                           }}
                           className="p-2 rounded-lg border border-border bg-card text-muted-foreground hover:text-primary hover:border-primary transition-all shadow-sm">
@@ -1052,12 +1441,11 @@ function ProductsContent() {
                           slug: undefined,
                           sku: undefined,
                           name: `${p.name} (Copy)`,
-                          benefits:
-                            Array.isArray(p.benefits) ?
-                              p.benefits.join(", ")
-                            : p.benefits,
+                          benefits: Array.isArray(p.benefits) ? p.benefits : [],
                         });
-                        toast.info("Product cloned! Make edits and click Save.");
+                        toast.info(
+                          "Product cloned! Make edits and click Save.",
+                        );
                       }}
                       className="p-3 bg-white rounded-2xl shadow-xl text-emerald-600 hover:scale-110 transition-transform"
                       title="Clone Product">
@@ -1068,10 +1456,7 @@ function ProductsContent() {
                         setIsNew(false);
                         setEditing({
                           ...p,
-                          benefits:
-                            Array.isArray(p.benefits) ?
-                              p.benefits.join(", ")
-                            : p.benefits,
+                          benefits: Array.isArray(p.benefits) ? p.benefits : [],
                         });
                       }}
                       className="p-3 bg-white rounded-2xl shadow-xl text-primary hover:scale-110 transition-transform">

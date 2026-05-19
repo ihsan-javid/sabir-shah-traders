@@ -121,22 +121,34 @@ export default function OrdersPage() {
 
   const executeBulkDelete = async () => {
     setBulkDeleteConfirmOpen(false);
+    const count = selectedOrderIds.length;
+    const toastId = toast.loading(
+      `Deleting ${count} order${count !== 1 ? "s" : ""}...`,
+    );
     try {
       setLoading(true);
-      await Promise.all(
-        selectedOrderIds.map(id =>
+      const results = await Promise.all(
+        selectedOrderIds.map((id) =>
           fetch(`/api/orders/${id}`, {
             method: "DELETE",
-            credentials: "include"
-          })
-        )
+            credentials: "include",
+          }),
+        ),
       );
-      toast.success("Selected orders deleted successfully");
+      const successCount = results.filter((res) => res.ok).length;
       setSelectedOrderIds([]);
       fetchOrders();
+      if (successCount > 0) {
+        toast.success(
+          `Successfully deleted ${successCount} order${successCount !== 1 ? "s" : ""}`,
+          { id: toastId },
+        );
+      } else {
+        toast.error("Failed to delete orders", { id: toastId });
+      }
     } catch (err) {
       console.error("Bulk delete error:", err);
-      toast.error("Failed to delete some orders");
+      toast.error("Error deleting orders", { id: toastId });
     } finally {
       setLoading(false);
     }
@@ -147,14 +159,14 @@ export default function OrdersPage() {
     try {
       setLoading(true);
       await Promise.all(
-        selectedOrderIds.map(id =>
+        selectedOrderIds.map((id) =>
           fetch(`/api/orders/${id}`, {
             method: "PATCH",
             headers: { "Content-Type": "application/json" },
             credentials: "include",
-            body: JSON.stringify({ status: newStatus })
-          })
-        )
+            body: JSON.stringify({ status: newStatus }),
+          }),
+        ),
       );
       toast.success(`Selected orders updated to ${newStatus}`);
       setSelectedOrderIds([]);
@@ -388,10 +400,13 @@ export default function OrdersPage() {
                 <th className="px-5 py-3 text-xs font-semibold text-[#6B7280] uppercase tracking-wider w-10">
                   <input
                     type="checkbox"
-                    checked={displayOrders.length > 0 && selectedOrderIds.length === displayOrders.length}
+                    checked={
+                      displayOrders.length > 0 &&
+                      selectedOrderIds.length === displayOrders.length
+                    }
                     onChange={(e) => {
                       if (e.target.checked) {
-                        setSelectedOrderIds(displayOrders.map(o => o._id));
+                        setSelectedOrderIds(displayOrders.map((o) => o._id));
                       } else {
                         setSelectedOrderIds([]);
                       }
@@ -462,9 +477,11 @@ export default function OrdersPage() {
                           checked={selectedOrderIds.includes(o._id)}
                           onChange={(e) => {
                             if (e.target.checked) {
-                              setSelectedOrderIds(prev => [...prev, o._id]);
+                              setSelectedOrderIds((prev) => [...prev, o._id]);
                             } else {
-                              setSelectedOrderIds(prev => prev.filter(id => id !== o._id));
+                              setSelectedOrderIds((prev) =>
+                                prev.filter((id) => id !== o._id),
+                              );
                             }
                           }}
                           className="rounded border-gray-300 text-[#1E7A46] focus:ring-[#1E7A46] h-4 w-4 cursor-pointer"
@@ -474,7 +491,10 @@ export default function OrdersPage() {
                         <div>{o.orderNumber}</div>
                         {o.verificationCode && (
                           <div className="text-[10px] text-gray-500 font-normal mt-0.5">
-                            Code: <span className="font-mono bg-gray-100 px-1 py-0.5 rounded text-gray-700 font-bold">{o.verificationCode}</span>
+                            Code:{" "}
+                            <span className="font-mono bg-gray-100 px-1 py-0.5 rounded text-gray-700 font-bold">
+                              {o.verificationCode}
+                            </span>
                           </div>
                         )}
                       </td>
@@ -606,23 +626,31 @@ export default function OrdersPage() {
                     <div className="mt-5 flex items-center gap-3 relative z-10">
                       <span
                         className={`px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest border ${
-                          selectedOrder.status === "delivered"
-                            ? "bg-emerald-50 text-emerald-600 border-emerald-200"
-                            : selectedOrder.status === "cancelled"
-                            ? "bg-red-50 text-red-600 border-red-200"
-                            : "bg-amber-50 text-amber-600 border-amber-200"
+                          selectedOrder.status === "delivered" ?
+                            "bg-emerald-50 text-emerald-600 border-emerald-200"
+                          : selectedOrder.status === "cancelled" ?
+                            "bg-red-50 text-red-600 border-red-200"
+                          : "bg-amber-50 text-amber-600 border-amber-200"
                         }`}>
                         {selectedOrder.status}
                       </span>
                       <span
                         className={`px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest border ${
-                          selectedOrder.payment?.method === "COD" && selectedOrder.payment?.status === "pending"
-                            ? "bg-blue-50 text-blue-600 border-blue-200"
-                            : "bg-emerald-50 text-emerald-600 border-emerald-200"
+                          (
+                            selectedOrder.payment?.method === "COD" &&
+                            selectedOrder.payment?.status === "pending"
+                          ) ?
+                            "bg-blue-50 text-blue-600 border-blue-200"
+                          : "bg-emerald-50 text-emerald-600 border-emerald-200"
                         }`}>
                         Payment:{" "}
-                        {selectedOrder.payment?.method === "COD" && selectedOrder.payment?.status === "pending" ?
-                          "Cash on Delivery" : (PAYMENT_STATUSES[selectedOrder.payment?.status]?.label || "Pending")
+                        {(
+                          selectedOrder.payment?.method === "COD" &&
+                          selectedOrder.payment?.status === "pending"
+                        ) ?
+                          "Cash on Delivery"
+                        : PAYMENT_STATUSES[selectedOrder.payment?.status]
+                            ?.label || "Pending"
                         }
                       </span>
                     </div>
@@ -690,25 +718,38 @@ export default function OrdersPage() {
                           </h3>
                           <div className="space-y-4">
                             <div className="flex justify-between items-center">
-                              <span className="text-xs text-muted-foreground uppercase tracking-wider">Method</span>
+                              <span className="text-xs text-muted-foreground uppercase tracking-wider">
+                                Method
+                              </span>
                               <span className="text-xs font-black bg-muted text-foreground border border-border px-2.5 py-1 rounded uppercase font-mono">
                                 {selectedOrder.payment?.method}
                               </span>
                             </div>
                             <div className="flex justify-between items-center">
-                              <span className="text-xs text-muted-foreground uppercase tracking-wider">Status</span>
-                              <span className={`text-xs font-black px-2.5 py-1 rounded border ${
-                                selectedOrder.payment?.status === "paid" 
-                                  ? "bg-emerald-50 text-emerald-600 border-emerald-200" 
+                              <span className="text-xs text-muted-foreground uppercase tracking-wider">
+                                Status
+                              </span>
+                              <span
+                                className={`text-xs font-black px-2.5 py-1 rounded border ${
+                                  selectedOrder.payment?.status === "paid" ?
+                                    "bg-emerald-50 text-emerald-600 border-emerald-200"
                                   : "bg-amber-50 text-amber-600 border-amber-200"
-                              }`}>
-                                {selectedOrder.payment?.method === "COD" && selectedOrder.payment?.status === "pending" ?
-                                  "Cash on Delivery" : (PAYMENT_STATUSES[selectedOrder.payment?.status]?.label || "Pending")
+                                }`}>
+                                {(
+                                  selectedOrder.payment?.method === "COD" &&
+                                  selectedOrder.payment?.status === "pending"
+                                ) ?
+                                  "Cash on Delivery"
+                                : PAYMENT_STATUSES[
+                                    selectedOrder.payment?.status
+                                  ]?.label || "Pending"
                                 }
                               </span>
                             </div>
                             <div className="flex justify-between items-center border-t border-border pt-3">
-                              <span className="text-xs text-muted-foreground uppercase tracking-wider">Total</span>
+                              <span className="text-xs text-muted-foreground uppercase tracking-wider">
+                                Total
+                              </span>
                               <span className="text-base font-black text-primary font-mono">
                                 {formatPKR(selectedOrder.pricing?.total || 0)}
                               </span>
@@ -778,9 +819,9 @@ export default function OrdersPage() {
                                 }
                                 disabled={loading}
                                 className={`px-3 py-1.5 rounded-lg text-xs font-bold uppercase tracking-wider transition-all duration-200 active:scale-95 ${
-                                  selectedOrder.status === s
-                                    ? "bg-primary text-primary-foreground shadow-sm border border-primary/30"
-                                    : "bg-muted hover:bg-muted/80 text-muted-foreground border border-border hover:text-foreground"
+                                  selectedOrder.status === s ?
+                                    "bg-primary text-primary-foreground shadow-sm border border-primary/30"
+                                  : "bg-muted hover:bg-muted/80 text-muted-foreground border border-border hover:text-foreground"
                                 }`}>
                                 {s}
                               </button>
@@ -829,7 +870,9 @@ export default function OrdersPage() {
                           </h3>
                           <div className="space-y-3 text-xs">
                             <div className="flex justify-between">
-                              <span className="text-muted-foreground">Subtotal</span>
+                              <span className="text-muted-foreground">
+                                Subtotal
+                              </span>
                               <span className="font-bold text-foreground font-mono">
                                 {formatPKR(
                                   selectedOrder.pricing?.subtotal || 0,
@@ -837,7 +880,9 @@ export default function OrdersPage() {
                               </span>
                             </div>
                             <div className="flex justify-between">
-                              <span className="text-muted-foreground">Shipping</span>
+                              <span className="text-muted-foreground">
+                                Shipping
+                              </span>
                               <span className="font-bold text-foreground font-mono">
                                 {selectedOrder.pricing?.shipping === 0 ?
                                   "Free"

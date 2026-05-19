@@ -110,7 +110,9 @@ function CategoryModal({ cat, onClose, onSave }) {
                 />
               </div>
             </label>
-            <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Visible to customers</span>
+            <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">
+              Visible to customers
+            </span>
           </div>
           <div className="flex gap-3 pt-2">
             <button
@@ -152,9 +154,9 @@ function CategoryRow({
         }`}
         style={{ paddingLeft: `${12 + depth * 24}px` }}>
         <div className="flex items-center gap-2">
-          <Checkbox 
-            checked={selected.includes(cat._id)} 
-            onCheckedChange={() => onSelect(cat._id)} 
+          <Checkbox
+            checked={selected.includes(cat._id)}
+            onCheckedChange={() => onSelect(cat._id)}
           />
           <GripVertical className="h-4 w-4 text-[#D1D5DB] cursor-grab flex-shrink-0" />
         </div>
@@ -178,7 +180,9 @@ function CategoryRow({
               </span>
             )}
           </div>
-          <div className="text-[10px] text-muted-foreground font-mono opacity-60">/{cat.slug}</div>
+          <div className="text-[10px] text-muted-foreground font-mono opacity-60">
+            /{cat.slug}
+          </div>
         </div>
         <div className="text-xs text-[#9CA3AF] mr-4 flex-shrink-0">
           {cat.productCount || 0} products
@@ -194,7 +198,9 @@ function CategoryRow({
               </button>
             </Tooltip>
           )}
-          <Tooltip content={cat.visible ? "Hide Category" : "Show Category"} position="top">
+          <Tooltip
+            content={cat.visible ? "Hide Category" : "Show Category"}
+            position="top">
             <button
               onClick={() => onToggle(cat)}
               className="p-1.5 rounded-lg hover:bg-[#F3F4F6] text-[#9CA3AF] hover:text-[#111111]">
@@ -287,7 +293,11 @@ export default function CategoriesPage() {
         await fetch("/api/admin/categories", {
           method: "PUT",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ id: parent._id, ...parent, children: updatedChildren }),
+          body: JSON.stringify({
+            id: parent._id,
+            ...parent,
+            children: updatedChildren,
+          }),
         });
       } else {
         await fetch("/api/admin/categories", {
@@ -336,10 +346,16 @@ export default function CategoriesPage() {
         await fetch(`/api/admin/categories?id=${parent._id}`, {
           method: "PUT",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ id: parent._id, ...parent, children: updatedChildren }),
+          body: JSON.stringify({
+            id: parent._id,
+            ...parent,
+            children: updatedChildren,
+          }),
         });
       } else {
-        await fetch(`/api/admin/categories?id=${cat._id}`, { method: "DELETE" });
+        await fetch(`/api/admin/categories?id=${cat._id}`, {
+          method: "DELETE",
+        });
       }
       toast.success("Category deleted");
       fetchCategories();
@@ -351,14 +367,16 @@ export default function CategoriesPage() {
   };
 
   const onSelect = (id) => {
-    setSelected(prev => prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id]);
+    setSelected((prev) =>
+      prev.includes(id) ? prev.filter((i) => i !== id) : [...prev, id],
+    );
   };
 
   const selectAll = () => {
     const allIds = [];
-    categories.forEach(cat => {
+    categories.forEach((cat) => {
       allIds.push(cat._id);
-      if (cat.children) cat.children.forEach(child => allIds.push(child._id));
+      if (cat.children) cat.children.forEach((child) => allIds.push(child._id));
     });
     setSelected(selected.length === allIds.length ? [] : allIds);
   };
@@ -368,28 +386,57 @@ export default function CategoriesPage() {
   };
 
   const executeBulkDelete = async () => {
+    const count = selected.length;
+    const toastId = toast.loading(
+      `Deleting ${count} category${count !== 1 ? "ies" : ""}...`,
+    );
     try {
+      let successCount = 0;
       for (const id of selected) {
-        const isParent = categories.find(c => c._id === id);
-        if (isParent) {
-          await fetch(`/api/admin/categories?id=${id}`, { method: "DELETE" });
-        } else {
-          const parent = categories.find(c => c.children?.some(ch => ch._id === id));
-          if (parent) {
-            const updatedChildren = parent.children.filter(ch => ch._id !== id);
-            await fetch("/api/admin/categories", {
-              method: "PUT",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({ id: parent._id, ...parent, children: updatedChildren }),
+        try {
+          const isParent = categories.find((c) => c._id === id);
+          if (isParent) {
+            const res = await fetch(`/api/admin/categories?id=${id}`, {
+              method: "DELETE",
             });
+            if (res.ok) successCount++;
+          } else {
+            const parent = categories.find((c) =>
+              c.children?.some((ch) => ch._id === id),
+            );
+            if (parent) {
+              const updatedChildren = parent.children.filter(
+                (ch) => ch._id !== id,
+              );
+              const res = await fetch("/api/admin/categories", {
+                method: "PUT",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                  id: parent._id,
+                  ...parent,
+                  children: updatedChildren,
+                }),
+              });
+              if (res.ok) successCount++;
+            }
           }
+        } catch (err) {
+          console.error("Error deleting category:", err);
         }
       }
-      toast.success(`${selected.length} categories deleted`);
       setSelected([]);
       fetchCategories();
-    } catch {
-      toast.error("Bulk delete failed");
+      if (successCount > 0) {
+        toast.success(
+          `Successfully deleted ${successCount} category${successCount !== 1 ? "ies" : ""}`,
+          { id: toastId },
+        );
+      } else {
+        toast.error("Failed to delete categories", { id: toastId });
+      }
+    } catch (err) {
+      console.error("Bulk delete error:", err);
+      toast.error("Error deleting categories", { id: toastId });
     } finally {
       setBulkConfirm(false);
     }
@@ -409,14 +456,22 @@ export default function CategoriesPage() {
       const res = await fetch("/api/admin/categories", {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ id: parent._id, ...parentData, children: updatedChildren }),
+        body: JSON.stringify({
+          id: parent._id,
+          ...parentData,
+          children: updatedChildren,
+        }),
       });
     } else {
       const { productCount, ...catData } = cat;
       const res = await fetch("/api/admin/categories", {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ id: cat._id, ...catData, visible: !cat.visible }),
+        body: JSON.stringify({
+          id: cat._id,
+          ...catData,
+          visible: !cat.visible,
+        }),
       });
     }
 
@@ -436,7 +491,9 @@ export default function CategoriesPage() {
     <div className="max-w-5xl mx-auto space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-xl font-bold text-foreground uppercase tracking-tight">Categories</h1>
+          <h1 className="text-xl font-bold text-foreground uppercase tracking-tight">
+            Categories
+          </h1>
           <p className="text-[10px] text-muted-foreground mt-0.5 uppercase tracking-widest font-medium">
             Organize your product catalog with nested categories
           </p>
@@ -480,8 +537,12 @@ export default function CategoriesPage() {
           <div
             key={s.label}
             className="bg-card rounded-2xl border border-border p-4 shadow-sm text-center hover:border-primary/20 transition-all">
-            <div className="text-xl font-black text-foreground tracking-tight">{s.value}</div>
-            <div className="text-[9px] font-black text-muted-foreground mt-0.5 uppercase tracking-widest opacity-60">{s.label}</div>
+            <div className="text-xl font-black text-foreground tracking-tight">
+              {s.value}
+            </div>
+            <div className="text-[9px] font-black text-muted-foreground mt-0.5 uppercase tracking-widest opacity-60">
+              {s.label}
+            </div>
           </div>
         ))}
       </div>
@@ -490,8 +551,16 @@ export default function CategoriesPage() {
       <div className="bg-card rounded-2xl border border-border shadow-sm overflow-hidden">
         <div className="flex items-center justify-between px-5 py-3 border-b border-border bg-muted/20">
           <div className="flex items-center gap-3 flex-1">
-            <Checkbox 
-              checked={selected.length > 0 && selected.length === (categories.length + categories.reduce((acc, c) => acc + (c.children?.length || 0), 0))}
+            <Checkbox
+              checked={
+                selected.length > 0 &&
+                selected.length ===
+                  categories.length +
+                    categories.reduce(
+                      (acc, c) => acc + (c.children?.length || 0),
+                      0,
+                    )
+              }
               onCheckedChange={selectAll}
             />
             <div className="grid grid-cols-4 flex-1 text-[10px] font-black text-muted-foreground uppercase tracking-widest">
@@ -517,7 +586,9 @@ export default function CategoriesPage() {
           {categories.length === 0 && !loading && (
             <div className="py-20 text-center">
               <Plus className="h-10 w-10 text-muted-foreground/20 mx-auto mb-3" />
-              <p className="text-sm text-muted-foreground font-medium">No categories found.</p>
+              <p className="text-sm text-muted-foreground font-medium">
+                No categories found.
+              </p>
             </div>
           )}
         </div>
