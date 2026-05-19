@@ -9,7 +9,7 @@ export async function GET() {
   try {
     await connectDB();
     const settings = await Settings.findOne();
-    const domain = settings?.seo?.canonicalBase || "https://sabirshahtraders.com";
+    const domain = "https://sabirshahtraders.netlify.app";
 
     // Fetch active products
     const products = await Product.find({}).lean();

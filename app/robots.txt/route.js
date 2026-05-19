@@ -7,7 +7,7 @@ export async function GET() {
   try {
     await connectDB();
     const settings = await Settings.findOne();
-    const robots = settings?.seo?.robotsTxt || "User-agent: *\nAllow: /\n\nSitemap: https://sabirshahtraders.com/sitemap.xml";
+    const robots = "User-agent: *\nAllow: /\n\nSitemap: https://sabirshahtraders.netlify.app/sitemap.xml";
     
     return new Response(robots, {
       headers: {
